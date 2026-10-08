@@ -12,7 +12,7 @@ secure a real AI system.
 
 | Milestone | Status |
 |---|---|
-| 1. Foundation: secured repo, design, requirements | 🔄 In progress |
+| 1. Foundation: secured repo, design, requirements | 🔄 In progress (repo secured ✅) |
 | 2. Working app (local) | ⏳ Planned |
 | 3. AWS deployment (Terraform) | ⏳ Planned |
 | 4. Security testing | ⏳ Planned |
