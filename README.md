@@ -54,7 +54,8 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 
 | Scenario | Expected result | Status |
 |---|---|---|
-| Hidden prompt injection in a vendor document | Flagged; treated as data; score unaffected; AI can't approve | ⏳ Planned |
+| Hidden prompt injection in a vendor document | Flagged; treated as data; score unaffected; AI can't approve | 🔄 Intake scanner flags and removes it (tested); prompt handling in Phase 5 |
+| Malicious or oversized upload (macros, zip bomb, JavaScript PDF) | Rejected before any parsing or AI | ✅ [Intake scanner](docs/system-security/intake-controls.md) tested |
 | Request for another vendor's information | Unavailable to the model | ⏳ Planned |
 | Normal user tries to approve a vendor | Access denied | ⏳ Planned |
 | AI tries to set a final decision | Technically impossible | 🔄 Rules engine has no decision field (tested); decision service in Phase 7 |

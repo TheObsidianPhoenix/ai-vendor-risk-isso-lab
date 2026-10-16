@@ -8,6 +8,7 @@
 | System Security Plan (SSP) | `system-security/` | 10 | Planned |
 | Asset inventory | `system-security/` | 10 | Planned |
 | Threat model (STRIDE, MITRE ATLAS, MITRE ATT&CK) | `threat-model/` | 10 | Planned |
+| [Intake scanner controls](system-security/intake-controls.md) (file checks, hidden-text detection, limits) | `system-security/` | 4 | Draft for review |
 | [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft, one open policy question |
 | Risk register and POA&M | `risk-management/` | 10 | Planned |
 | Security control matrix | `risk-management/` | 10 | Planned |

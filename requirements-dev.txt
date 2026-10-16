@@ -1,7 +1,8 @@
 # Development-only tools. Versions are pinned so builds are repeatable and
 # Dependabot can alert on known vulnerabilities (RA-5, SI-2).
 
-# Used by scripts/generate_sample_data.py and scripts/verify_sample_data.py
-openpyxl==3.1.5
-pypdf==6.20.1
+# Everything the application itself needs
+-r requirements.txt
+
+# Used by scripts/generate_sample_data.py, scripts/verify_sample_data.py and the tests
 reportlab==5.0.1
