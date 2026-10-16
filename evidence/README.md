@@ -20,6 +20,9 @@ Proof that each control is in place and working. An assessor should be able to p
 | EV-005 | AC-2, AC-6 (prelim.) | Console access through `AccountFullAccessRole` (temporary credentials, no access keys) | `aws/2026-10-11_aws_iam-roles.png` | 2026-10-11 |
 | EV-006 | Cost guardrail (mapping to validate) | Zero-spend budget alert | `aws/2026-10-11_aws_zero-spend-budget.png` | 2026-10-11 |
 | EV-007 | AU-2, AU-12 (prelim.) | CloudTrail trail delivering to S3 | `aws/2026-10-11_aws_cloudtrail-trail.png` | 2026-10-11 |
-| EV-008 | CM-3 (prelim.) | First change merged through a pull request | `github/YYYY-MM-DD_github_first-pull-request.png` | Pending |
+| EV-008 | CM-3 (prelim.) | First change merged through a pull request, with reviewer comment | `github/2026-10-15_github_first-pull-request.png` | 2026-10-15 |
+| EV-009 | CM-3, CM-5 (prelim.) | Ruleset requiring a pull request and three passing checks, no bypass | `github/2026-10-15_github_ruleset-require-pr-checks.png` | 2026-10-15 |
+| EV-010 | RA-5, SA-11 (prelim.) | Pull request merged only after CodeQL, dependency review and test-data checks passed | `github/2026-10-15_github_pr3-checks-passed.png` | 2026-10-15 |
+| EV-011 | AC-6 (prelim.) | Claude GitHub App limited to this one repository | `github/2026-10-15_github-app-single-repo.png` | 2026-10-15 |
 
 Control IDs marked "prelim." are preliminary and are validated in the Phase 10 control matrix.
