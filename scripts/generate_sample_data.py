@@ -17,6 +17,8 @@ produces the same files.
 from __future__ import annotations
 
 import json
+import re
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -100,6 +102,26 @@ def write_questionnaire(path: Path, vendor: str, canary: str, answers: dict[str,
     wb.properties.modified = FIXED_DATE
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
+    _make_reproducible(path)
+
+
+def _make_reproducible(path: Path) -> None:
+    """Rewrite the .xlsx so regenerating it gives byte-identical output.
+
+    openpyxl stamps the save time into docProps/core.xml and into each zip
+    entry. Both are replaced with FIXED_DATE.
+    """
+    stamp = FIXED_DATE.strftime("%Y-%m-%dT%H:%M:%SZ")
+    with zipfile.ZipFile(path) as src:
+        entries = [(info.filename, src.read(info.filename)) for info in src.infolist()]
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as dst:
+        for name, data in entries:
+            if name == "docProps/core.xml":
+                data = re.sub(rb"(<dcterms:modified[^>]*>)[^<]*", rb"\g<1>" + stamp.encode(), data)
+            info = zipfile.ZipInfo(name, date_time=FIXED_DATE.timetuple()[:6])
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o600 << 16
+            dst.writestr(info, data)
 
 
 # ---------------------------------------------------------------------------
