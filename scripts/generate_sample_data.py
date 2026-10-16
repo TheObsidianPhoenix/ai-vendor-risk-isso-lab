@@ -10,12 +10,19 @@ Run from the repository root:
 
     python3 scripts/generate_sample_data.py
 
-Requires: reportlab, openpyxl. Output is deterministic, so running it again
-produces the same files.
+To build into a different folder (used by scripts/verify_sample_data.py):
+
+    python3 scripts/generate_sample_data.py --out /some/folder
+
+Requires: reportlab, openpyxl. The content is deterministic: every page's
+text, every cell and all metadata come out the same on every run. The exact
+bytes can differ between computers, because compression libraries differ,
+so checks compare content rather than bytes.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import zipfile
@@ -421,6 +428,10 @@ def expected_score(findings: dict) -> dict:
 
 
 def main() -> None:
+    global OUT
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--out", type=Path, default=OUT, help="folder to write into (default: sample-data/)")
+    OUT = parser.parse_args().out
     for build in (nimbus, copperline, kestrel):
         record = build()
         record["expected_score"] = expected_score(record["expected_findings"])

@@ -35,10 +35,8 @@ jobs:
           python-version: "3.13"
       - name: Install pinned dependencies
         run: python -m pip install -r requirements-dev.txt
-      - name: Regenerate sample documents
-        run: python scripts/generate_sample_data.py
-      - name: Fail if the committed documents differ from the generator's output
-        run: git diff --exit-code -- sample-data/
+      - name: Compare committed documents with the generator's output (by content)
+        run: python scripts/verify_sample_data.py
 
   codeql:
     name: Code scanning (CodeQL)

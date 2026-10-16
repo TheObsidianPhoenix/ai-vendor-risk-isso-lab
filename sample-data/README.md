@@ -35,7 +35,8 @@ Copperline scores **80 (Critical)** because it only sent self-attested answers: 
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
-python3 scripts/generate_sample_data.py
+python3 scripts/generate_sample_data.py   # rebuild the documents
+python3 scripts/verify_sample_data.py     # check the committed files match
 ```
 
-The output is deterministic: running the script again produces identical files.
+The content is deterministic: every page's text, every cell and all metadata come out the same on every run. The exact bytes can differ between computers because compression libraries differ, so the automated check compares content, not bytes. It runs on every pull request, so a test document can't be changed, or have its hidden injection removed, without the change showing up.
