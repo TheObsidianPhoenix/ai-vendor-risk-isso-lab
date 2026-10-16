@@ -6,6 +6,12 @@
     "vendor-questionnaire.xlsx",
     "soc2-type2-summary.pdf"
   ],
+  "expected_score": {
+    "rule_set": "1.0",
+    "score": 0,
+    "classification": "Low",
+    "prompt_injection_flagged": false
+  },
   "deliberate_problems": [],
   "expected_findings": {
     "identity_access": {
@@ -74,10 +80,5 @@
         "soc2-type2-summary.pdf p5"
       ]
     }
-  },
-  "expected_score": {
-    "rule_set": "1.0 (proposal)",
-    "score": 0,
-    "classification": "Low"
   }
 }

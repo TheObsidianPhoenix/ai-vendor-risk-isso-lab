@@ -5,6 +5,12 @@
   "documents": [
     "vendor-questionnaire.xlsx"
   ],
+  "expected_score": {
+    "rule_set": "1.0",
+    "score": 80,
+    "classification": "Critical",
+    "prompt_injection_flagged": false
+  },
   "deliberate_problems": [
     {
       "type": "claim_without_evidence",
@@ -93,10 +99,5 @@
         "vendor-questionnaire.xlsx PR-01"
       ]
     }
-  },
-  "expected_score": {
-    "rule_set": "1.0 (proposal)",
-    "score": 80,
-    "classification": "Critical"
   }
 }

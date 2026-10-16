@@ -29,7 +29,7 @@ Each `expected-findings.json` is the answer key: the evidence state the system s
 
 ## A finding already
 
-Copperline scores **80 (Critical)** because it only sent self-attested answers: eight "unverified" categories alone add 48 points. That may be too harsh for a vendor whose only problem is missing evidence, and a Critical rating triggers the two-person review rule. This is noted for tuning in Phase 6, when the point values are reviewed against these answer keys.
+Copperline scores **80 (Critical)** because it only sent self-attested answers: eight "unverified" categories alone add 48 points. That may be too harsh for a vendor whose only problem is missing evidence, and a Critical rating triggers the two-person review rule. This is an open policy question, with options, in section 9 of the [scoring methodology](../docs/risk-management/scoring-methodology.md).
 
 ## Regenerating
 

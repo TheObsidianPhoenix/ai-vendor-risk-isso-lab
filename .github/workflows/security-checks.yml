@@ -38,6 +38,20 @@ jobs:
       - name: Compare committed documents with the generator's output (by content)
         run: python scripts/verify_sample_data.py
 
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Run the test suite (Python standard library only, no extra packages)
+        run: python -m unittest discover -s tests -t . -v
+
   codeql:
     name: Code scanning (CodeQL)
     runs-on: ubuntu-latest
