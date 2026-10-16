@@ -3,5 +3,5 @@
 
 # Used by scripts/generate_sample_data.py and scripts/verify_sample_data.py
 openpyxl==3.1.5
-pypdf==5.9.0
+pypdf==6.20.1
 reportlab==5.0.1
