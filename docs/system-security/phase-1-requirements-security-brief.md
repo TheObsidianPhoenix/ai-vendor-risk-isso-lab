@@ -5,9 +5,9 @@
 | **System** | Counterpart: AI-assisted vendor risk assessment |
 | **Organization** | Meridian Trust Labs (fictional) |
 | **Document owner** | Jasmine Alexander, ISSO |
-| **Version** | 0.1 (draft) |
+| **Version** | 1.0 |
 | **Date** | 2026-10-08 |
-| **Status** | Awaiting approval before Phase 2 (architecture) |
+| **Status** | Approved 2026-10-08 |
 
 > **Decision authority statement:** AI recommendations are advisory. Final vendor risk acceptance and approval authority remains with an authorized human reviewer.
 
@@ -72,6 +72,7 @@ The AI worker is listed as an identity on purpose. It is software with permissio
 ## 6. System boundary
 
 **Inside the boundary**
+
 - Web user interface and application API
 - User authentication and role management
 - Document storage and intake checks
@@ -83,6 +84,7 @@ The AI worker is listed as an identity on purpose. It is software with permissio
 - Infrastructure defined as code (Terraform)
 
 **Outside the boundary (interconnections and dependencies)**
+
 - User devices and browsers
 - GitHub (source code, CI/CD pipeline, security scanning). It's a supporting system: it can deploy to the boundary, so it is secured and monitored.
 - The cloud provider's underlying infrastructure (shared responsibility model)
@@ -205,4 +207,4 @@ NIST SP 800-53 Rev. 5 control references are preliminary. Full mapping and valid
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
-| ISSO / document owner | Jasmine Alexander | Pending | |
+| ISSO / document owner | Jasmine Alexander | Approved | 2026-10-08 |

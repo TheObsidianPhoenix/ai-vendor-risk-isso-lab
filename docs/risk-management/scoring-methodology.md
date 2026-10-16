@@ -48,6 +48,7 @@ The score is the sum of the points for every category, capped at 100.
 | 75–100 | Critical |
 
 **Floor rules** apply after the bands:
+
 - One critical gap sets the classification to at least **High**.
 - Two or more critical gaps set it to **Critical**.
 
@@ -92,6 +93,7 @@ These are written in each vendor's `expected-findings.json` independently of the
 ## 8. Changing the rules
 
 Point values, bands, critical categories and floor rules live in `ruleset.py`. A change:
+
 1. goes through a pull request (required by the repository ruleset),
 2. increases `VERSION`,
 3. updates this document and the expected results, and
