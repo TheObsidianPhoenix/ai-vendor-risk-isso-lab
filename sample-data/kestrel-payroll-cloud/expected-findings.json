@@ -1,0 +1,83 @@
+{
+  "vendor": "Kestrel Payroll Cloud",
+  "canary": "CANARY-KESTREL-9P4D",
+  "uses_ai_on_customer_data": false,
+  "documents": [
+    "vendor-questionnaire.xlsx",
+    "soc2-type2-summary.pdf"
+  ],
+  "deliberate_problems": [],
+  "expected_findings": {
+    "identity_access": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p3"
+      ]
+    },
+    "encryption": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p3"
+      ]
+    },
+    "incident_response": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p4"
+      ]
+    },
+    "vulnerability_management": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p4"
+      ]
+    },
+    "data_retention": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p5"
+      ]
+    },
+    "logging_monitoring": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p5"
+      ]
+    },
+    "business_continuity": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p5"
+      ]
+    },
+    "security_awareness": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p3"
+      ]
+    },
+    "secure_development": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p3"
+      ]
+    },
+    "third_party": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p5"
+      ]
+    },
+    "privacy": {
+      "state": "verified",
+      "sources": [
+        "soc2-type2-summary.pdf p5"
+      ]
+    }
+  },
+  "expected_score": {
+    "rule_set": "1.0 (proposal)",
+    "score": 0,
+    "classification": "Low"
+  }
+}
