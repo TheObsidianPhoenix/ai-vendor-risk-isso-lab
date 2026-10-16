@@ -1,0 +1,102 @@
+{
+  "vendor": "Copperline Backup",
+  "canary": "CANARY-COPPER-3K8M",
+  "uses_ai_on_customer_data": false,
+  "documents": [
+    "vendor-questionnaire.xlsx"
+  ],
+  "deliberate_problems": [
+    {
+      "type": "claim_without_evidence",
+      "where": "ENC-01 and ENC-02",
+      "expected": "Encryption marked unverified (an evidence gap), never verified"
+    },
+    {
+      "type": "conflicting_information",
+      "where": "DR-01 says deleted within 30 days; DR-02 says backups kept 7 years",
+      "expected": "Data retention marked as conflict"
+    },
+    {
+      "type": "missing_information",
+      "where": "VM-01 to VM-04 and SD-01 left blank",
+      "expected": "Vulnerability management and secure development marked absent"
+    }
+  ],
+  "expected_findings": {
+    "identity_access": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx IAM-01"
+      ]
+    },
+    "encryption": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx ENC-01",
+        "vendor-questionnaire.xlsx ENC-02"
+      ],
+      "note": "Claimed; no algorithm, no evidence"
+    },
+    "incident_response": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx IR-01"
+      ]
+    },
+    "vulnerability_management": {
+      "state": "absent",
+      "sources": [
+        "vendor-questionnaire.xlsx VM-01 to VM-04 (blank)"
+      ]
+    },
+    "data_retention": {
+      "state": "conflict",
+      "sources": [
+        "vendor-questionnaire.xlsx DR-01",
+        "vendor-questionnaire.xlsx DR-02"
+      ]
+    },
+    "logging_monitoring": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx LM-01"
+      ]
+    },
+    "business_continuity": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx BC-01",
+        "vendor-questionnaire.xlsx BC-02"
+      ]
+    },
+    "security_awareness": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx SA-01"
+      ]
+    },
+    "secure_development": {
+      "state": "absent",
+      "sources": [
+        "vendor-questionnaire.xlsx SD-01 (blank)"
+      ]
+    },
+    "third_party": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx TP-01"
+      ]
+    },
+    "privacy": {
+      "state": "unverified",
+      "sources": [
+        "vendor-questionnaire.xlsx PR-01"
+      ]
+    }
+  },
+  "expected_score": {
+    "rule_set": "1.0 (proposal)",
+    "score": 80,
+    "classification": "Critical"
+  }
+}

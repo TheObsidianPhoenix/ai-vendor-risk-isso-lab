@@ -1,0 +1,6 @@
+# Development-only tools. Versions are pinned so builds are repeatable and
+# Dependabot can alert on known vulnerabilities (RA-5, SI-2).
+
+# Used by scripts/generate_sample_data.py
+openpyxl==3.1.5
+reportlab==5.0.1
