@@ -8,6 +8,7 @@
 | System Security Plan (SSP) | `system-security/` | 10 | Planned |
 | Asset inventory | `system-security/` | 10 | Planned |
 | Threat model (STRIDE, MITRE ATLAS, MITRE ATT&CK) | `threat-model/` | 10 | Planned |
+| [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft, one open policy question |
 | Risk register and POA&M | `risk-management/` | 10 | Planned |
 | Security control matrix | `risk-management/` | 10 | Planned |
 | AI impact assessment, system card, EU AI Act classification | `ai-governance/` | 10 | Planned |

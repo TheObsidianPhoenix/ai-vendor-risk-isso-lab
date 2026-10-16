@@ -57,9 +57,9 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 | Hidden prompt injection in a vendor document | Flagged; treated as data; score unaffected; AI can't approve | ⏳ Planned |
 | Request for another vendor's information | Unavailable to the model | ⏳ Planned |
 | Normal user tries to approve a vendor | Access denied | ⏳ Planned |
-| AI tries to set a final decision | Technically impossible | ⏳ Planned |
+| AI tries to set a final decision | Technically impossible | 🔄 Rules engine has no decision field (tested); decision service in Phase 7 |
 | Malformed AI output | Schema validation fails safely | ⏳ Planned |
-| Encryption claimed without evidence | Flagged as an evidence gap, not verified | ⏳ Planned |
+| Encryption claimed without evidence | Flagged as an evidence gap, not verified | ✅ Rules engine tested; extraction in Phase 5 |
 
 ## Deployment
 
