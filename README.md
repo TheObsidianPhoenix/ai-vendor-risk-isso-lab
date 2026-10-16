@@ -10,13 +10,13 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 
 | Milestone | Status |
 |---|---|
-| 1. Foundation: secured repo, design, requirements, architecture | 🔄 In progress |
-| 2. Working app (local, with a pretend AI) | ⏳ Planned |
+| 1. Foundation: secured repo, design, requirements, architecture, test data, security pipeline | ✅ Complete |
+| 2. Working app (local, with a pretend AI) | 🔄 Next |
 | 3. AWS deployment (Terraform) | ⏳ Planned |
 | 4. Security testing | ⏳ Planned |
 | 5. ISSO documentation package | ⏳ Planned |
 
-**Completed so far:** GitHub repository secured · design prototype · [Phase 1 Requirements & Security Brief](docs/system-security/phase-1-requirements-security-brief.md) · [Phase 2 Architecture](docs/architecture/phase-2-architecture.md) · AWS account baseline (Phase 0)
+**Completed so far:** GitHub repository secured, with every change to `main` requiring a pull request and passing security checks · design prototype · [Phase 1 Requirements & Security Brief](docs/system-security/phase-1-requirements-security-brief.md) · [Phase 2 Architecture](docs/architecture/phase-2-architecture.md) · AWS account baseline (Phase 0) · [fictional vendor documents with planted attacks](sample-data/README.md) · automated security checks (CodeQL, dependency review, test-data integrity, Dependabot)
 
 ## What it does
 
@@ -32,7 +32,9 @@ Serverless on AWS: Cognito, API Gateway, Lambda, S3, DynamoDB, SQS, KMS, Amazon 
 
 ## Security model
 
-*Coming in Milestone 2 and 3.* Summary of identity, data protection, logging and monitoring controls, with links to the control matrix.
+**In place now (repository):** two-factor authentication; secret scanning with push protection; Dependabot alerts and updates; a ruleset that blocks deletion and history rewrites of `main` and requires a pull request plus three passing checks before any merge, with no bypass. Every third-party GitHub Action is pinned to a full commit hash and runs with a read-only token.
+
+*Coming in Milestones 2 and 3:* application identity, data protection, logging and monitoring controls, with links to the control matrix.
 
 ## AI security controls
 
