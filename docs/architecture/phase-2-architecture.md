@@ -4,10 +4,10 @@
 |---|---|
 | **System** | Counterpart: AI-assisted vendor risk assessment |
 | **Document owner** | Jasmine Alexander, ISSO |
-| **Version** | 0.1 (draft) |
+| **Version** | 0.2 |
 | **Date** | 2026-10-08 |
 | **Builds on** | [Phase 1 Requirements & Security Brief](../system-security/phase-1-requirements-security-brief.md) |
-| **Status** | Awaiting approval before Phase 3 (repository and pipeline) |
+| **Status** | Approved 2026-10-08; updated 2026-10-11 for the AWS account setup |
 
 Nothing in this document has been deployed. It describes what we will build, why, and what it will cost.
 
@@ -25,7 +25,7 @@ Five design rules shape every choice below:
 4. **Evidence is tamper-resistant.** Audit records go to write-once storage.
 5. **Pay only for use.** No always-on components (load balancers, NAT gateways, containers that idle).
 
-**Region:** US East (N. Virginia), `us-east-1`. New Bedrock models usually reach it first, and most published prices are quoted for it. Latency doesn't matter for this project.
+**Region:** US East (Ohio), `us-east-2`. This is the region AWS provisioned for the project. Latency doesn't matter for this project. Bedrock model availability in this region is confirmed in Phase 5; if a needed model isn't offered here, Bedrock cross-region inference is the documented option.
 
 ## 2. Architecture diagram
 
@@ -290,14 +290,14 @@ The specific model, and its per-token price, is chosen in Phase 5. Until then th
 | ISSO monitors | The alarms in section 9. |
 | Evidence | Alarm list; a sample log line showing no sensitive data; an alarm test. |
 
-### 5.12 AWS IAM, IAM Identity Center and GitHub OIDC: who can do what
+### 5.12 AWS IAM, AWS Settings sign-in and GitHub OIDC: who can do what
 
 | Question | Answer |
 |---|---|
 | What it does | Defines every identity (people, functions, the deployment pipeline) and what each may do. |
 | Why we need it | Least privilege is the foundation of every other control here. |
 | Risk it introduces | Over-permissive roles; long-lived access keys that leak. |
-| How we secure it | No IAM users with access keys. You sign in through IAM Identity Center with MFA. GitHub deploys through OIDC: AWS issues short-lived credentials only to workflows from your repo's main branch. Root account locked away with MFA and no keys. |
+| How we secure it | No IAM users with access keys. You sign in through AWS Settings with MFA and reach the console through `AccountFullAccessRole`, which gives temporary credentials (section 6.2). GitHub deploys through OIDC: AWS issues short-lived credentials only to workflows from your repo's main branch. If a root user is created later (section 12.5), it gets MFA, no access keys, and emergency use only. |
 | ISSO monitors | New roles, policy changes, any access key creation, root use. |
 | Evidence | Role trust policies; IAM credential report showing no access keys; Access Analyzer findings. |
 
@@ -334,8 +334,8 @@ No role is allowed to delete from the `audit` bucket. Every role that writes aud
 | Person | How they sign in | What they can reach |
 |---|---|---|
 | App users (fictional reviewers, users, admin, ISSO) | Cognito, with MFA | Only the app, according to their group |
-| You, as the AWS account owner | IAM Identity Center, with MFA | The AWS console, for setup, investigation and evidence collection |
-| Root account | Locked away; used only for tasks that require it | Everything (which is why it's locked) |
+| You, as the project owner | AWS Settings, with MFA on your login provider; console access through `AccountFullAccessRole` (temporary credentials) | The AWS console, for setup, investigation and evidence collection |
+| Root user | None exists in the current account setup (section 12.5). If one is created later, it gets MFA, no access keys, and emergency use only. | Everything, which is why it would be locked away |
 
 ### 6.3 Application permission checks
 
@@ -410,7 +410,7 @@ Each event is written twice: to CloudWatch Logs, where it drives alarms, and as 
 | Token budget | 80% of the monthly cap | Cost abuse or a runaway loop |
 | Dead-letter queue | Any message | Jobs failing repeatedly |
 | CloudTrail changed | Trail stopped, deleted or modified | Attempt to hide activity |
-| Root account used | Any root sign-in | Root should never be needed day to day |
+| Root account used | Any root sign-in (applies once a root user exists) | Root should never be needed day to day |
 | IAM or KMS policy changed | Any change outside a pipeline deployment | Possible privilege escalation |
 | AWS budget | $5 and $10 per month | Cost guardrail |
 
@@ -461,7 +461,7 @@ Terraform keeps its state, its record of what it created, in the `tf-state` buck
 
 ## 12. Cost estimate
 
-Prices are for US East (N. Virginia), checked 2026-10-08 against AWS pricing pages. Items marked "re-verify" will be checked again before anything is deployed.
+Prices were checked 2026-10-08 against AWS pricing pages, which quote US East (N. Virginia). They will be re-checked for US East (Ohio), the project's region, before deployment. Items marked "re-verify" will be checked again before anything is deployed.
 
 ### 12.1 While idle (no one using the app)
 
@@ -471,7 +471,7 @@ Prices are for US East (N. Virginia), checked 2026-10-08 against AWS pricing pag
 | ECR image storage (about 1 GB) | About $0.10 | $0.10 per GB-month; 500 MB free for the first year on new accounts |
 | S3 storage (a few MB of synthetic documents and logs) | Under $0.05 | re-verify |
 | DynamoDB on-demand storage | Pennies | re-verify |
-| CloudTrail (one trail, management events) | $0 | First copy of management events delivered to S3 is free |
+| CloudTrail (one trail, management events) | $0 plus S3 storage for the log files | First copy of management events delivered to S3 is free |
 | Cognito (a handful of users) | $0 | 10,000 monthly active users free; doesn't expire |
 | Lambda, API Gateway, SQS, CloudWatch | $0 | No charge without traffic |
 | **Estimated total while idle** | **About $1.25** | |
@@ -507,11 +507,35 @@ New AWS accounts now choose between two plans. Both include up to $200 in credit
 |---|---|---|
 | Services | Limited to select services | All services |
 | Charges | None unless you upgrade | Pay as you go once credits are used |
-| Duration | The account closes after 6 months or when credits run out, whichever comes first | Ongoing |
+| Duration | Ends after 6 months or when credits run out, whichever comes first | Ongoing |
 
-**Recommendation: the paid plan, with budget alarms set on day one.** A portfolio has to stay online while you're job hunting, which may be longer than 6 months, and the free plan may not include Bedrock. Your credits still apply on the paid plan, and with this design they should cover months of use.
+**Decision: stay on the free plan while building locally, and upgrade to the paid plan just before Milestone 3 (first deployment).** The project's AWS account was created on 2026-10-08 on the free plan.
 
-The project's AWS account was created on 2026-10-08. Which plan it is on, and whether that plan includes Bedrock, is checked during Phase 0.
+- While nothing is deployed, the free plan is the safest choice because it can't produce a bill.
+- When a free plan ends, AWS suspends the account and keeps its data for 90 days. If the account isn't upgraded in that time, AWS permanently erases it. For this account, the console shows the free plan ending on 2027-04-01.
+- Upgrading can happen at any time, and remaining credits carry over. A paid plan can't be switched back to the free plan.
+- The free plan limits some services, and a portfolio has to stay online while job hunting, so the upgrade happens before deployment. Budget alarms are in place before the upgrade.
+
+### 12.5 How this AWS account is set up
+
+AWS created the account through its newer sign-up experience, which works differently from a traditional account:
+
+- **Projects.** Each project is a separate AWS account inside an organization that AWS manages. This system runs in its own project, **ai vendor risk isso lab**, created 2026-10-11. The first, default project ("Hold My Coffee") holds nothing for this system.
+- **Sign-in.** You sign in to AWS Settings through a login provider, with MFA, instead of with a root email and password. Console access uses the `AccountFullAccessRole`, which issues temporary credentials.
+- **No root user yet.** A root user and an organization management account exist for you only after upgrading and activating AWS's advanced features. Activation can't be undone and removes AWS's spend limit.
+- **Managed guardrails.** AWS applies organization policies to these accounts, including limits on regions and blocks on some security services such as GuardDuty, Security Hub and IAM Access Analyzer. The full list for this account is confirmed before deployment.
+
+**Phase 0 baseline, completed 2026-10-11:**
+
+| Control | Status | Evidence |
+|---|---|---|
+| MFA on the AWS Settings sign-in | Done | Screenshot of the registered MFA device |
+| Console access through temporary role credentials, no access keys | Done | IAM role list showing `AccountFullAccessRole` |
+| Zero-spend budget alert | Done | Budget screenshot |
+| CloudTrail trail delivering to S3 | Done | Trail configuration screenshot |
+| Region recorded | US East (Ohio), `us-east-2` | Project details |
+
+**About the CloudTrail trail:** it was created in the console, before Terraform exists. Once the `logging` module is built, the trail is either brought under Terraform with `terraform import` or replaced by the Terraform-managed one, so there is only ever one source of truth. Until then, it should have log file validation turned on and deliver to a private bucket.
 
 ## 13. Design decisions and accepted risks
 
@@ -527,6 +551,7 @@ The project's AWS account was created on 2026-10-08. Which plan it is on, and wh
 | D-08 | No web application firewall (AWS WAF) | WAF in front of CloudFront and the API | Saves a monthly charge. Compensating controls: authentication on every route, API throttling, strict input validation. A production system would add WAF. |
 | D-09 | GuardDuty, Security Hub and AWS Config not always on | Run them continuously | They cost money monthly. If free trials are available, we can turn them on for a short window to capture findings as evidence, then turn them off. |
 | D-10 | Single region, no high availability | Multi-region | Matches the Phase 1 assumption. Point-in-time recovery and versioning cover accidental deletion. |
+| D-11 | Decide on upgrading and activating advanced features before Milestone 3 | Stay in the managed sandbox | Activation gives a real organization, a root user and the blocked security services, but is irreversible and removes the spend limit. Decided before first deployment, with budget alarms in place. |
 
 These decisions feed directly into the Phase 10 risk register and POA&M.
 
@@ -535,7 +560,10 @@ These decisions feed directly into the Phase 10 risk register and POA&M.
 | Item | When |
 |---|---|
 | Which Bedrock model, its per-token price, and AWS's data-use and retention terms for it | Phase 5 |
-| Which plan the AWS account is on, and whether it includes Bedrock | Phase 0 (account setup) |
+| Credit expiration date, the paid-plan upgrade, and whether to activate advanced features (D-11) | Before Milestone 3 |
+| Which services the account's managed guardrails block, including any this design needs (Cognito, Bedrock, KMS customer managed keys, S3 Object Lock, GitHub OIDC role assumption) | Before Milestone 3 |
+| CloudTrail trail settings (log file validation, private bucket), then import into Terraform | Phase 3 check; import when the logging module is built |
+| Bedrock model availability in us-east-2 | Phase 5 |
 | Cognito `auth_time` behavior for the fresh-MFA check | Phase 7 |
 | Terraform version for S3-only state locking | Phase 3 |
 | Free status of AWS Budgets alerts, SSM standard parameters, IAM Access Analyzer external findings, SNS email, ECR basic scanning and CloudFront at our volume | Before first deployment |
@@ -543,10 +571,10 @@ These decisions feed directly into the Phase 10 risk register and POA&M.
 
 ## 15. What comes next
 
-The AWS account already exists, so its baseline security (Phase 0: root MFA, no root access keys, an IAM Identity Center user, budget alarms and CloudTrail) is done next. An account that exists but isn't secured is a risk even with nothing deployed in it. Phase 3 then builds the repository structure, the security pipeline in GitHub Actions, and the synthetic vendor documents, all without deploying anything to AWS.
+Phase 0 is complete (section 12.5). Phase 3 builds the repository structure, the security pipeline in GitHub Actions, and the synthetic vendor documents, all without deploying anything to AWS.
 
 ## 16. Approval
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
-| ISSO / document owner | Jasmine Alexander | Pending | |
+| ISSO / document owner | Jasmine Alexander | Approved | 2026-10-08 |
