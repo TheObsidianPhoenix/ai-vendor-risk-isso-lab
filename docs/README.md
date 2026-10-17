@@ -10,7 +10,7 @@
 | Threat model (STRIDE, MITRE ATLAS, MITRE ATT&CK) | `threat-model/` | 10 | Planned |
 | [Intake scanner controls](system-security/intake-controls.md) (file checks, hidden-text detection, limits) | `system-security/` | 4 | Draft for review |
 | [Milestone 2 working app controls](system-security/milestone-2-app-controls.md) (AI guardrails, access control, human review, audit) | `system-security/` | 4, 5, 7 | Draft for review |
-| [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft, one open policy question |
+| [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft; Copperline decision recorded (option D) |
 | Risk register and POA&M | `risk-management/` | 10 | Planned |
 | Security control matrix | `risk-management/` | 10 | Planned |
 | AI impact assessment, system card, EU AI Act classification | `ai-governance/` | 10 | Planned |

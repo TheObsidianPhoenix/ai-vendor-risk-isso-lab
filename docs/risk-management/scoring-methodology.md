@@ -112,7 +112,13 @@ Options for the document owner to decide:
 | **C. Add a band cap: unverified alone can't exceed High** | 80, capped at High | Keeps the score, adjusts the label. Adds a rule reviewers must understand. |
 | **D. Add a "request evidence" outcome before rating** | Not rated until evidence is requested | Closest to real TPRM practice, but it's a workflow change, not a scoring change. |
 
-**Decision:** pending. Recorded here once made, with the rule set version it applies to.
+**Decision (2026-10-16, Jasmine Alexander, document owner): Option D.** The problem is the process, not the score: a vendor that hasn't sent evidence yet shouldn't be rated as if its evidence were bad.
+
+- **Now:** rule set 1.0 stays as it is. Copperline still scores 80, Critical, and needs two reviewers. Nothing in the scoring changes, so no version bump.
+- **Next (workflow change, planned for Phase 7 follow-up):** an assessment where most categories are only self-attested gets a status of *Evidence requested*. The reviewer sends the vendor the app's generated follow-up questions, with a response deadline. The vendor is rated once evidence arrives, or on the current rule set if the deadline passes.
+- **Why not B or C:** both make missing evidence look less risky by changing the math. Option D keeps the scoring honest and adds the step a real TPRM team would take: ask before you judge.
+
+The rule set version this applies to: 1.0 (unchanged).
 
 ## 10. Test evidence
 
