@@ -102,15 +102,28 @@ jobs:
           terraform_version: "1.16.6"
           terraform_wrapper: false
       - name: Formatting
-        run: terraform fmt -check -recursive -diff infrastructure
-      - name: Validate each root configuration
         run: |
+          if ! files=$(terraform fmt -check -recursive infrastructure); then
+            echo "::error title=terraform fmt::Not formatted: $(echo $files)"
+            exit 1
+          fi
+      - name: Validate each root configuration
+        # Errors are also posted as annotations, so they show on the pull request
+        run: |
+          status=0
           for dir in infrastructure/bootstrap infrastructure/environments/dev; do
             echo "::group::$dir"
-            terraform -chdir="$dir" init -backend=false -input=false
-            terraform -chdir="$dir" validate
+            if ! out=$( { terraform -chdir="$dir" init -backend=false -input=false -no-color && terraform -chdir="$dir" validate -no-color; } 2>&1 ); then
+              status=1
+              echo "$out"
+              msg=$(echo "$out" | grep -v '^$' | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
+              echo "::error title=terraform validate ($dir)::$msg"
+            else
+              echo "$out"
+            fi
             echo "::endgroup::"
           done
+          exit $status
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -118,5 +131,14 @@ jobs:
         # Any finding fails the job. Accepted gaps are skipped inline in the
         # Terraform, each with its reason, so they show up in review.
         run: |
-          python -m pip install checkov==3.3.28
-          checkov --directory infrastructure --framework terraform --compact --quiet
+          python -m pip install --quiet checkov==3.3.28
+          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov.json; then
+            python - <<'PY'
+          import json
+          data = json.load(open("checkov.json/results_json.json"))
+          for report in (data if isinstance(data, list) else [data]):
+              for f in report.get("results", {}).get("failed_checks", []):
+                  print(f"::error file={f['repo_file_path'].lstrip('/')},line={f['file_line_range'][0]},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+          PY
+            exit 1
+          fi
