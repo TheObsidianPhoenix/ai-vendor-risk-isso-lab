@@ -132,13 +132,23 @@ jobs:
         # Terraform, each with its reason, so they show up in review.
         run: |
           python -m pip install --quiet checkov==3.3.28
-          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov.json; then
+          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov-out; then
             python - <<'PY'
-          import json
-          data = json.load(open("checkov.json/results_json.json"))
-          for report in (data if isinstance(data, list) else [data]):
-              for f in report.get("results", {}).get("failed_checks", []):
-                  print(f"::error file={f['repo_file_path'].lstrip('/')},line={f['file_line_range'][0]},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+          import glob, json
+          try:
+              files = glob.glob("checkov-out/*.json")
+              failed = []
+              for path in files:
+                  data = json.load(open(path))
+                  for report in data if isinstance(data, list) else [data]:
+                      failed += report.get("results", {}).get("failed_checks", [])
+              print(f"::error title=Checkov::{len(failed)} failed checks (files: {files})")
+              for f in failed[:45]:
+                  where = f.get("repo_file_path", "").lstrip("/")
+                  line = (f.get("file_line_range") or [1])[0]
+                  print(f"::warning file={where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+          except Exception as error:
+              print(f"::error title=Checkov report::{error!r}")
           PY
             exit 1
           fi
