@@ -132,7 +132,10 @@ jobs:
         # Terraform, each with its reason, so they show up in review.
         run: |
           python -m pip install --quiet checkov==3.3.28
-          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov-out; then
+          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov-out > checkov.log 2>&1; then
+            cat checkov.log
+            msg=$(grep -v '^$' checkov.log | tail -25 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
+            echo "::error title=Checkov output::$msg"
             python - <<'PY'
           import glob, json
           try:
