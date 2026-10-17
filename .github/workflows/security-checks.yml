@@ -140,7 +140,7 @@ jobs:
           failed = [f for r in reports for f in r.get("results", {}).get("failed_checks", [])]
           passed = sum(len(r.get("results", {}).get("passed_checks", [])) for r in reports)
           skipped = sum(len(r.get("results", {}).get("skipped_checks", [])) for r in reports)
-          print(f"Checkov: {passed} passed, {len(failed)} failed, {skipped} skipped with a written reason")
+          print(f"::notice title=Checkov::{passed} passed, {len(failed)} failed, {skipped} skipped with a written reason")
           for f in failed:
               where = "infrastructure" + f.get("repo_file_path", "")
               line = (f.get("file_line_range") or [1])[0]
