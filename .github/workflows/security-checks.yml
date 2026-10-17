@@ -87,3 +87,36 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
+
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Static checks only: no AWS credentials, nothing is planned or applied here.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+      - name: Formatting
+        run: terraform fmt -check -recursive -diff infrastructure
+      - name: Validate each root configuration
+        run: |
+          for dir in infrastructure/bootstrap infrastructure/environments/dev; do
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            echo "::endgroup::"
+          done
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Security scan (Checkov)
+        # Any finding fails the job. Accepted gaps are skipped inline in the
+        # Terraform, each with its reason, so they show up in review.
+        run: |
+          python -m pip install checkov==3.3.28
+          checkov --directory infrastructure --framework terraform --compact --quiet
