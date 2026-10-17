@@ -19,6 +19,10 @@ locals {
 }
 
 data "aws_iam_policy_document" "key" {
+  # In a key policy, "*" as the resource means "this key" (a key policy can only
+  # ever govern its own key), so these two generic IAM checks don't apply:
+  # checkov:skip=CKV_AWS_111: Key policy resource "*" is this key only; each service statement is limited to this account
+  # checkov:skip=CKV_AWS_356: Same: key policies always use "*" as the resource
   # Lets IAM policies in this account grant use of the key. Without this, even
   # administrators could be locked out of the key for good.
   statement {

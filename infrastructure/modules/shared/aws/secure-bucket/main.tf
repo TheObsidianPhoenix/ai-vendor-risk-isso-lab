@@ -74,6 +74,15 @@ resource "aws_s3_bucket_object_lock_configuration" "this" {
 resource "aws_s3_bucket_lifecycle_configuration" "this" {
   bucket = aws_s3_bucket.this.id
 
+  rule {
+    id     = "abort-incomplete-uploads"
+    status = "Enabled"
+    filter {}
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+
   dynamic "rule" {
     for_each = var.expire_days > 0 ? [var.expire_days] : []
     content {
@@ -92,15 +101,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
     filter {}
     noncurrent_version_expiration {
       noncurrent_days = var.noncurrent_version_days
-    }
-  }
-
-  rule {
-    id     = "abort-incomplete-uploads"
-    status = "Enabled"
-    filter {}
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 1
     }
   }
 

@@ -132,26 +132,18 @@ jobs:
         # Terraform, each with its reason, so they show up in review.
         run: |
           python -m pip install --quiet checkov==3.3.28
-          if ! checkov --directory infrastructure --framework terraform --compact --quiet --output cli --output json --output-file-path console,checkov-out > checkov.log 2>&1; then
-            cat checkov.log
-            msg=$(grep -v '^$' checkov.log | tail -25 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
-            echo "::error title=Checkov output::$msg"
-            python - <<'PY'
-          import glob, json
-          try:
-              files = glob.glob("checkov-out/*.json")
-              failed = []
-              for path in files:
-                  data = json.load(open(path))
-                  for report in data if isinstance(data, list) else [data]:
-                      failed += report.get("results", {}).get("failed_checks", [])
-              print(f"::error title=Checkov::{len(failed)} failed checks (files: {files})")
-              for f in failed[:45]:
-                  where = f.get("repo_file_path", "").lstrip("/")
-                  line = (f.get("file_line_range") or [1])[0]
-                  print(f"::warning file={where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
-          except Exception as error:
-              print(f"::error title=Checkov report::{error!r}")
+          checkov --directory infrastructure --framework terraform --quiet --output json --soft-fail > checkov.json
+          python - <<'PY'
+          import json, sys
+          data = json.load(open("checkov.json"))
+          reports = data if isinstance(data, list) else [data]
+          failed = [f for r in reports for f in r.get("results", {}).get("failed_checks", [])]
+          passed = sum(len(r.get("results", {}).get("passed_checks", [])) for r in reports)
+          skipped = sum(len(r.get("results", {}).get("skipped_checks", [])) for r in reports)
+          print(f"Checkov: {passed} passed, {len(failed)} failed, {skipped} skipped with a written reason")
+          for f in failed:
+              where = f.get("repo_file_path", "").lstrip("/")
+              line = (f.get("file_line_range") or [1])[0]
+              print(f"::error file=infrastructure/{where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+          sys.exit(1 if failed else 0)
           PY
-            exit 1
-          fi
