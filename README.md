@@ -12,7 +12,7 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 |---|---|
 | 1. Foundation: secured repo, design, requirements, architecture, test data, security pipeline | ✅ Complete |
 | 2. Working app (local, with a pretend AI) | ✅ Working: sign-in by role, vendors, upload, intake scanner, AI extraction with validation, scoring, human decisions, audit log |
-| 3. AWS deployment (Terraform) | ⏳ Planned |
+| 3. AWS deployment (Terraform) | 🔄 Foundation layer written and security-scanned ([infrastructure](infrastructure/README.md)); not yet deployed |
 | 4. Security testing | ⏳ Planned |
 | 5. ISSO documentation package | ⏳ Planned |
 
@@ -84,7 +84,7 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 
 ## Deployment
 
-*Coming in Milestone 3.*
+Infrastructure is Terraform with a cloud-agnostic module layout ([`infrastructure/`](infrastructure/README.md)). Every pull request runs `terraform validate` and a Checkov security scan, and GitHub deploys with short-lived OIDC credentials, never stored keys. The [deploy runbook](docs/architecture/deploy-runbook.md) covers the cost (about $1.10 a month for the foundation layer) and the steps, starting with the account decision gate.
 
 ## Screenshots
 
