@@ -23,6 +23,7 @@ data "aws_iam_policy_document" "key" {
   # ever govern its own key), so these two generic IAM checks don't apply:
   # checkov:skip=CKV_AWS_111: Key policy resource "*" is this key only; each service statement is limited to this account
   # checkov:skip=CKV_AWS_356: Same: key policies always use "*" as the resource
+  # checkov:skip=CKV_AWS_109: The account-root statement is AWS's default key policy; it delegates to IAM so the key can never be orphaned
   # Lets IAM policies in this account grant use of the key. Without this, even
   # administrators could be locked out of the key for good.
   statement {

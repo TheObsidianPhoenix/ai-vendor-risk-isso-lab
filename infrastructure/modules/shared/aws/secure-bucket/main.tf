@@ -72,6 +72,7 @@ resource "aws_s3_bucket_object_lock_configuration" "this" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  # checkov:skip=CKV_AWS_300: False positive. The abort-incomplete-uploads rule below sets 1 day; Checkov misreads rule lists that include a dynamic block (the bootstrap bucket's identical static rule passes)
   bucket = aws_s3_bucket.this.id
 
   rule {

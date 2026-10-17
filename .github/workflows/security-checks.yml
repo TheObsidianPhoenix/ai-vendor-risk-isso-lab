@@ -142,8 +142,8 @@ jobs:
           skipped = sum(len(r.get("results", {}).get("skipped_checks", [])) for r in reports)
           print(f"Checkov: {passed} passed, {len(failed)} failed, {skipped} skipped with a written reason")
           for f in failed:
-              where = f.get("repo_file_path", "").lstrip("/")
+              where = "infrastructure" + f.get("repo_file_path", "")
               line = (f.get("file_line_range") or [1])[0]
-              print(f"::error file=infrastructure/{where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+              print(f"::error file={where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
           sys.exit(1 if failed else 0)
           PY
