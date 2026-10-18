@@ -4,6 +4,7 @@
 |---|---|---|---|
 | [Phase 1 Requirements & Security Brief](system-security/phase-1-requirements-security-brief.md) | `system-security/` | 1 | Approved |
 | [Phase 2 Architecture](architecture/phase-2-architecture.md) (diagrams, trust boundaries, IAM model, costs) | `architecture/` | 2 | Approved |
+| [Deploy runbook: foundation layer](architecture/deploy-runbook.md) (costs, decision gate, bootstrap, first deploy) | `architecture/` | Milestone 3 | Ready for review |
 | [Design prototype](design/counterpart-design-prototype.html) | `design/` | Design | Done |
 | System Security Plan (SSP) | `system-security/` | 10 | Planned |
 | Asset inventory | `system-security/` | 10 | Planned |

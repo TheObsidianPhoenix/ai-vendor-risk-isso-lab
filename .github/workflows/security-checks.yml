@@ -87,3 +87,63 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
+
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Static checks only: no AWS credentials, nothing is planned or applied here.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+      - name: Formatting
+        run: |
+          if ! files=$(terraform fmt -check -recursive infrastructure); then
+            echo "::error title=terraform fmt::Not formatted: $(echo $files)"
+            exit 1
+          fi
+      - name: Validate each root configuration
+        # Errors are also posted as annotations, so they show on the pull request
+        run: |
+          status=0
+          for dir in infrastructure/bootstrap infrastructure/environments/dev; do
+            echo "::group::$dir"
+            if ! out=$( { terraform -chdir="$dir" init -backend=false -input=false -no-color && terraform -chdir="$dir" validate -no-color; } 2>&1 ); then
+              status=1
+              echo "$out"
+              msg=$(echo "$out" | grep -v '^$' | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')
+              echo "::error title=terraform validate ($dir)::$msg"
+            else
+              echo "$out"
+            fi
+            echo "::endgroup::"
+          done
+          exit $status
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Security scan (Checkov)
+        # Any finding fails the job. Accepted gaps are skipped inline in the
+        # Terraform, each with its reason, so they show up in review.
+        run: |
+          python -m pip install --quiet checkov==3.3.28
+          checkov --directory infrastructure --framework terraform --output json --soft-fail > checkov.json
+          python - <<'PY'
+          import json, sys
+          data = json.load(open("checkov.json"))
+          reports = data if isinstance(data, list) else [data]
+          failed = [f for r in reports for f in r.get("results", {}).get("failed_checks", [])]
+          passed = sum(len(r.get("results", {}).get("passed_checks", [])) for r in reports)
+          skipped = sum(len(r.get("results", {}).get("skipped_checks", [])) for r in reports)
+          print(f"::notice title=Checkov::{passed} passed, {len(failed)} failed, {skipped} skipped with a written reason")
+          for f in failed:
+              where = "infrastructure" + f.get("repo_file_path", "")
+              line = (f.get("file_line_range") or [1])[0]
+              print(f"::error file={where},line={line},title={f['check_id']}::{f['check_name']} ({f['resource']})")
+          sys.exit(1 if failed else 0)
+          PY
