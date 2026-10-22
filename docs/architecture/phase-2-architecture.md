@@ -551,7 +551,7 @@ AWS created the account through its newer sign-up experience, which works differ
 | D-08 | No web application firewall (AWS WAF) | WAF in front of CloudFront and the API | Saves a monthly charge. Compensating controls: authentication on every route, API throttling, strict input validation. A production system would add WAF. |
 | D-09 | GuardDuty, Security Hub and AWS Config not always on | Run them continuously | They cost money monthly. If free trials are available, we can turn them on for a short window to capture findings as evidence, then turn them off. |
 | D-10 | Single region, no high availability | Multi-region | Matches the Phase 1 assumption. Point-in-time recovery and versioning cover accidental deletion. |
-| D-11 | Decide on upgrading and activating advanced features before Milestone 3 | Stay in the managed sandbox | Activation gives a real organization, a root user and the blocked security services, but is irreversible and removes the spend limit. Decided before first deployment, with budget alarms in place. |
+| D-11 | **Decided 2026-10-22:** upgraded to the paid plan with a **$20 monthly spend limit** (the lowest offered). Advanced features **not** activated | Stay on the free plan; or activate advanced features | The paid plan is needed for Bedrock and for the app to stay online while job hunting. The $20 hard cap bounds the worst case (a runaway AI loop or cost abuse, OWASP LLM10), with budget alerts at $5 and $10 well before it. Advanced features stay off: irreversible, they remove the spend limit, and nothing in the design needs them yet. |
 
 These decisions feed directly into the Phase 10 risk register and POA&M.
 
@@ -560,7 +560,7 @@ These decisions feed directly into the Phase 10 risk register and POA&M.
 | Item | When |
 |---|---|
 | Which Bedrock model, its per-token price, and AWS's data-use and retention terms for it | Phase 5 |
-| Credit expiration date, the paid-plan upgrade, and whether to activate advanced features (D-11) | Before Milestone 3 |
+| ~~Credit expiration date, the paid-plan upgrade, and whether to activate advanced features (D-11)~~ Decided 2026-10-22; see D-11 | Done |
 | Which services the account's managed guardrails block, including any this design needs (Cognito, Bedrock, KMS customer managed keys, S3 Object Lock, GitHub OIDC role assumption) | Before Milestone 3 |
 | CloudTrail trail settings (log file validation, private bucket), then import into Terraform | Phase 3 check; import when the logging module is built |
 | Bedrock model availability in us-east-2 | Phase 5 |
