@@ -118,7 +118,8 @@ def vendor_status(store, vendor_id: str) -> dict:
     if latest is None:
         return {"status": "No assessment yet", "final": False}
     if latest["status"] != "ready_for_review":
-        return {"status": "AI output rejected: needs a new assessment", "final": False}
+        label = "AI call failed" if latest["status"] == "ai_call_failed" else "AI output rejected"
+        return {"status": f"{label}: needs a new assessment", "final": False}
     decisions = [d for d in store.list_decisions(vendor_id) if d["assessment_id"] == latest["id"]]
     final = next((d for d in reversed(decisions) if d["stage"] == "final"), None)
     if final:

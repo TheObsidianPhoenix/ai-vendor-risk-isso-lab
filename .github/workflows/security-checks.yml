@@ -53,6 +53,10 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Run the test suite
         run: python -m unittest discover -s tests -t . -v
+      - name: Evaluation harness (pretend model; the real-model run is manual)
+        # Proves the harness itself works on every change. Accuracy must stay
+        # at 100% against the answer keys and every attack must be defended.
+        run: python evals/run_evals.py --out eval-result.json --min-accuracy 1.0 --require-all-defended
 
   codeql:
     name: Code scanning (CodeQL)

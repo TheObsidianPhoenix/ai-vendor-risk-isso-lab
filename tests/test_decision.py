@@ -32,7 +32,7 @@ class DecisionRules(unittest.TestCase):
                                           uses_ai_on_customer_data=info["uses_ai_on_customer_data"],
                                           owner_id=owner, owner_name="Owner")
         for doc in sample_documents(sample):
-            self.store.add_document(vendor["id"], None, filename=doc["filename"], sha256=doc["sha256"],
+            self.store.add_document(vendor["id"], None, filename=doc["filename"], sha256=doc["sha256"], doc_type=doc["doc_type"],
                                     status="accepted", flags=doc["flags"], segments=doc["segments"],
                                     uploaded_by=owner, uploaded_by_name="Owner", size_bytes=1, file_type="pdf")
         return vendor, self.assess(vendor, mode)
