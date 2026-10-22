@@ -4,7 +4,7 @@
 |---|---|
 | **System** | Counterpart, Meridian Trust Labs (fictional) |
 | **Covers** | `infrastructure/bootstrap` and `infrastructure/environments/dev` (foundation layer) |
-| **Status** | Ready for review. **Nothing deployed.** Stage 0 is a decision gate |
+| **Status** | Stage 0 decisions made 2026-10-22 (guardrail check remains). **Nothing deployed yet** |
 | **Builds on** | [Phase 2 Architecture](phase-2-architecture.md), sections 10 to 13 |
 
 ## What the foundation layer costs
@@ -24,10 +24,10 @@ Prices are from the Phase 2 estimate (checked 2026-10-08). Re-check them on the 
 
 These must be settled before anything is created. Record each answer in the Phase 2 architecture document, section 13.
 
-- [ ] **D-11: upgrade the account to the paid plan.** The free plan limits services and ends on 2027-04-01. Upgrading can't be reversed, but remaining credits carry over.
-- [ ] **D-11: whether to activate advanced features.** This is **irreversible** and removes AWS's spend limit. It is *not* needed for the foundation layer. Leave it off unless a guardrail blocks something below.
+- [x] **D-11: upgrade the account to the paid plan.** Done 2026-10-22, with a **$20 monthly spend limit**.
+- [x] **D-11: whether to activate advanced features.** Decided: **not activated** (irreversible, and it removes the spend limit).
 - [ ] **Guardrails allow what we need.** Confirm the account's managed policies don't block: KMS customer managed keys, S3 Object Lock, CloudTrail, DynamoDB, EventBridge, Budgets, and creating an IAM OIDC provider and roles. The quickest real test is Stage 1's `terraform plan`, which fails clearly on anything blocked.
-- [ ] **Budget alarms are on** before the upgrade (Phase 0 zero-spend budget, already done).
+- [x] **Budget alarms are on** before the upgrade (Phase 0 zero-spend budget).
 
 ## Stage 1: Bootstrap (once, by hand, in AWS CloudShell)
 
