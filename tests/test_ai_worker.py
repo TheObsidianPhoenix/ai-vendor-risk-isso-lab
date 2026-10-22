@@ -71,7 +71,8 @@ class Pipeline(unittest.TestCase):
         for vendor in VENDORS:
             with self.subTest(vendor=vendor):
                 honest, lying = assess(vendor), assess(vendor, "fabricates")
-                self.assertEqual(len(lying["citation_problems"]), len(lying["findings"]))
+                quote_problems = [p for p in lying["citation_problems"] if "not found" in p or "wasn't uploaded" in p]
+                self.assertEqual(len(quote_problems), len(lying["findings"]))
                 self.assertGreaterEqual(lying["score"]["score"], honest["score"]["score"])
 
     def test_unknown_documents_get_no_evidence(self):
@@ -79,6 +80,26 @@ class Pipeline(unittest.TestCase):
         result = run_assessment(vendor_id="v", vendor_name="Unknown", uses_ai_on_customer_data=False,
                                 documents=docs, model=PretendModel())
         self.assertEqual(result["score"]["classification"], "Critical")
+
+
+class IndependentEvidence(unittest.TestCase):
+    """A 'verified' claim needs a found quote from an independent audit report (labelled by a person)."""
+
+    def test_vendor_written_documents_cannot_verify(self):
+        relabelled = [dict(d, doc_type="questionnaire" if d["doc_type"] == "audit_report" else d["doc_type"])
+                      for d in sample_documents("kestrel-payroll-cloud")]
+        result = run_assessment(vendor_id="v", vendor_name="Kestrel", uses_ai_on_customer_data=False,
+                                documents=relabelled, model=PretendModel())
+        scored = {line["category"]: line["scored_state"] for line in result["score"]["lines"]}
+        self.assertNotIn("verified", scored.values())
+        self.assertGreater(result["score"]["score"], 0)
+        self.assertTrue(any("without an independent audit report" in p for p in result["citation_problems"]))
+
+    def test_unlabelled_documents_count_as_vendor_claims(self):
+        unlabelled = [{k: v for k, v in d.items() if k != "doc_type"} for d in sample_documents("kestrel-payroll-cloud")]
+        result = run_assessment(vendor_id="v", vendor_name="Kestrel", uses_ai_on_customer_data=False,
+                                documents=unlabelled, model=PretendModel())
+        self.assertNotEqual(result["score"]["classification"], "Low")
 
 
 class OutputValidation(unittest.TestCase):

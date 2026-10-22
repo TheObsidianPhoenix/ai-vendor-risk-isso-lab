@@ -315,12 +315,18 @@ function legend() {
 
 function documentsPanel(d) {
   const v = d.vendor;
+  // A person says what each document is. Only "independent audit report" can make a control verified.
+  const typeSelect = h("select", { class: "input", id: "docType", style: "max-width:520px" },
+    h("option", { value: "" }, "Choose the document type first…"),
+    Object.entries(d.document_types).map(([value, label]) => h("option", { value }, label)));
   const input = h("input", { type: "file", multiple: true, accept: ".pdf,.xlsx,.docx", class: "sr-only", id: "fileInput",
     onchange: async (e) => {
+      const docType = document.getElementById("docType").value;
+      if (!docType) { toast("Choose what kind of document this is before uploading."); e.target.value = ""; return; }
       for (const file of e.target.files) {
         toast(`Checking ${file.name}…`, 8000);
         try {
-          const r = await api("POST", `/api/vendors/${v.id}/documents`, await file.arrayBuffer(), { "X-Filename": file.name });
+          const r = await api("POST", `/api/vendors/${v.id}/documents`, await file.arrayBuffer(), { "X-Filename": file.name, "X-Document-Type": docType });
           toast(r.document.status === "accepted" ? `${file.name}: accepted` + (r.document.flags.length ? " with flags" : "")
             : `${file.name}: rejected. ${r.document.rejection_reason}`, 5000);
         } catch (err) { toast(`${file.name}: ${err.message}`, 5000); }
@@ -331,14 +337,17 @@ function documentsPanel(d) {
   return h("div", { class: "panel", style: "margin-bottom:16px" },
     h("div", { class: "panel-head" }, h("h2", {}, "1 · Documents and intake checks"),
       h("span", { class: "meta" }, "Every file is checked before the AI sees it")),
-    d.can.upload ? h("div", { class: "panel-body" }, h("label", { class: "dropzone", for: "fileInput", style: "display:block;cursor:pointer" },
+    d.can.upload ? h("div", { class: "panel-body" },
+      h("label", { class: "field" }, h("span", {}, "What kind of document is it?"), typeSelect,
+        h("div", { class: "help" }, "Only an independent audit report can make a control \u201cverified.\u201d Anything the vendor writes about itself counts as a claim.")),
+      h("label", { class: "dropzone", for: "fileInput", style: "display:block;cursor:pointer" },
       icon("upload"), h("div", { class: "strong", style: "margin-top:6px" }, "Choose vendor documents to upload"),
       h("div", { class: "small muted" }, "PDF, XLSX or DOCX · up to 10 MB each · checked for macros, hidden text and more")), input) : null,
     d.documents.length ? h("div", { class: "panel-body flush table-wrap" }, h("table", {},
       h("thead", {}, h("tr", {}, ["Document", "Intake result", "What the scanner found", "SHA-256"].map((t) => h("th", {}, t)))),
       h("tbody", {}, d.documents.map((doc) => h("tr", {},
         h("td", {}, h("div", { class: "strong" }, doc.filename),
-          h("div", { class: "small muted" }, `${kb(doc.size_bytes)} · uploaded by ${doc.uploaded_by_name}`)),
+          h("div", { class: "small muted" }, `${(d.document_types[doc.doc_type] || "Type not set").split(" (")[0]} · ${kb(doc.size_bytes)} · uploaded by ${doc.uploaded_by_name}`)),
         h("td", {}, doc.status === "rejected" ? h("span", { class: "badge b-crit" }, "Rejected")
           : doc.flags.some((f) => f.injection) ? h("span", { class: "badge b-crit" }, icon("alert", 12), "Accepted, flagged")
             : h("span", { class: "badge b-low" }, "Passed")),
@@ -374,8 +383,9 @@ function assessmentPanel(d) {
       h("div", { class: "panel-head" }, h("h2", {}, `2 · AI assessment (version ${a.version})`), h("span", { class: "meta" }, a.model_id)),
       h("div", { class: "panel-body" }, injection, pipeline(a),
         h("div", { class: "callout callout-crit" }, icon("lock"), h("div", {},
-          h("strong", {}, "The AI's answer was rejected and nothing from it was used."),
-          h("div", { style: "margin-top:4px" }, "Validator: ", h("span", { class: "strong" }, a.rejection_reason)),
+          h("strong", {}, a.status === "ai_call_failed" ? "The AI couldn't complete this assessment, so nothing was scored."
+            : "The AI's answer was rejected and nothing from it was used."),
+          h("div", { style: "margin-top:4px" }, a.status === "ai_call_failed" ? "Reason: " : "Validator: ", h("span", { class: "strong" }, a.rejection_reason)),
           h("div", { class: "small", style: "margin-top:6px" },
             "No score was produced and no status changed. The event is in the audit log. A reviewer can't decide on a rejected assessment, so a new one must be run.")))));
   }
@@ -415,7 +425,8 @@ function assessmentPanel(d) {
 function pipeline(a) {
   const ok = a.status === "ready_for_review";
   const steps = [["Intake", a.injection_flags.length ? "flag" : "done", a.injection_flags.length ? "Flags found" : "Passed"],
-    ["AI extraction", "done", a.model_mode === "normal" ? "Pretend model" : "Red team mode"],
+    ["AI extraction", a.status === "ai_call_failed" ? "flag" : "done", a.model_mode !== "normal" ? "Red team mode"
+      : a.model_id.startsWith("pretend") ? "Pretend model" : "Bedrock" + (a.usage ? ` · ${a.usage.input_tokens + a.usage.output_tokens} tokens` : "")],
     ["Schema check", ok ? "done" : "flag", ok ? "Valid" : "Rejected"],
     ["Quote check", !ok ? "" : a.citation_problems.length ? "flag" : "done", !ok ? "Skipped" : a.citation_problems.length ? `${a.citation_problems.length} not found` : "All found"],
     ["Rules engine", ok ? "done" : "", ok ? `Scored ${a.score.score}` : "Not run"],

@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from app.ai_worker import MODES, PretendModel, run_assessment
+from app.ai_worker import DOCUMENT_TYPES, MODES, make_model, provider, run_assessment
 from app.common import auth
 from app.common.audit import AuditLog
 from app.common.store import Store
@@ -144,7 +144,8 @@ class CounterpartApp:
     def me(self, session, body, **_):
         return {"user": session.user.public(), "signed_in_at": session.signed_in_at,
                 "fresh_for_seconds": max(0, int(auth.FRESH_SIGN_IN_SECONDS - (self.sessions.clock() - session.signed_in_at))),
-                "model_mode": self.settings["model_mode"], "model_mode_label": MODES[self.settings["model_mode"]]}
+                "model_mode": self.settings["model_mode"], "model_mode_label": MODES[self.settings["model_mode"]],
+                "model_provider": provider()}
 
     def overview(self, session, body, **_):
         user = session.user
@@ -199,13 +200,17 @@ class CounterpartApp:
                                           if user.id == vendor["owner_id"] or user.id in uploaders else None),
             },
             "decision_options": DECISIONS,
+            "document_types": DOCUMENT_TYPES,
         }
 
-    def upload(self, session, body, vendor_id, raw=b"", filename="", **_):
+    def upload(self, session, body, vendor_id, raw=b"", filename="", doc_type="", **_):
         vendor = self._visible_vendor(session, vendor_id)
         if not auth.can_upload(session.user, vendor):
             self._log(session, "document.upload", vendor_id, "denied", reason="not the vendor's requester")
             raise ApiError(403, "Only the person who requested this vendor can upload its documents")
+        doc_type = doc_type if doc_type in DOCUMENT_TYPES else None
+        if doc_type is None:
+            raise ApiError(400, "Choose what kind of document this is")
         result = scan_file(raw, filename or "unnamed")
         flags = [{"kind": f.kind, "location": f.location, "detail": f.detail, "excerpt": f.excerpt,
                   "injection": f.kind in INJECTION_FLAG_KINDS} for f in result.flags]
@@ -213,11 +218,11 @@ class CounterpartApp:
             vendor_id, raw if result.status == "accepted" else None,
             filename=result.filename, sha256=result.sha256, size_bytes=result.size_bytes,
             file_type=result.file_type, status=result.status, rejection_reason=result.rejection_reason,
-            flags=flags, segments=[[s.location, s.text] for s in result.segments],
+            doc_type=doc_type, flags=flags, segments=[[s.location, s.text] for s in result.segments],
             uploaded_by=session.user.id, uploaded_by_name=session.user.name)
         # Audit: what was found and where, never the excerpt itself
         self._log(session, "document.upload", vendor_id, "success" if result.status == "accepted" else "rejected",
-                  document_id=document["id"], sha256=result.sha256, file_type=result.file_type,
+                  document_id=document["id"], sha256=result.sha256, file_type=result.file_type, doc_type=doc_type,
                   rejection_reason=result.rejection_reason,
                   flags=[f"{f['kind']} @ {f['location']}" for f in flags])
         return {"document": {k: v for k, v in document.items() if k != "segments"}}
@@ -232,16 +237,18 @@ class CounterpartApp:
             raise ApiError(400, "Upload at least one document that passes the intake checks")
         record = run_assessment(vendor_id=vendor_id, vendor_name=vendor["name"],
                                 uses_ai_on_customer_data=vendor["uses_ai_on_customer_data"],
-                                documents=documents, model=PretendModel(self.settings["model_mode"]))
+                                documents=documents, model=make_model(self.settings["model_mode"]))
         assessment = self.store.add_assessment(record, started_by=session.user.id, started_by_name=session.user.name)
         score = assessment["score"]
         self._log(session, "assessment.run", vendor_id,
-                  "success" if assessment["status"] == "ready_for_review" else "ai_output_rejected",
+                  "success" if assessment["status"] == "ready_for_review" else assessment["status"],
                   assessment_id=assessment["id"], model_mode=record["model_mode"],
                   rejection_reason=assessment["rejection_reason"],
                   score=score["score"] if score else None,
                   classification=score["classification"] if score else None,
                   citation_problems=len(assessment["citation_problems"]),
+                  input_tokens=(assessment.get("usage") or {}).get("input_tokens"),
+                  output_tokens=(assessment.get("usage") or {}).get("output_tokens"),
                   injection_flags=len(assessment["injection_flags"]))
         return {"assessment": assessment}
 
@@ -275,7 +282,7 @@ class CounterpartApp:
         return {"users": [auth.get_user(uid).public() for uid in auth.DEMO_USERS], "roles": auth.ROLES}
 
     def get_settings(self, session, body, **_):
-        return {"model_mode": self.settings["model_mode"], "modes": MODES,
+        return {"model_mode": self.settings["model_mode"], "modes": MODES, "model_provider": provider(),
                 "can_change": session.user.has("settings.change")}
 
     def change_settings(self, session, body, **_):
@@ -358,6 +365,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError(413, f"Files must be at most {DEFAULT_LIMITS.max_file_bytes // (1024 * 1024)} MB")
             raw = self.rfile.read(length)
             params["filename"] = (self.headers.get("X-Filename") or "")[:200]
+            params["doc_type"] = (self.headers.get("X-Document-Type") or "")[:40]
         elif length:
             if length > MAX_JSON_BYTES:
                 raise ApiError(413, "Request too large")

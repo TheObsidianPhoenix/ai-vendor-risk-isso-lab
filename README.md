@@ -58,6 +58,20 @@ Serverless on AWS: Cognito, API Gateway, Lambda, S3, DynamoDB, SQS, KMS, Amazon 
 
 Untrusted documents pass an [intake scanner](docs/system-security/intake-controls.md) that strips hidden text and rejects macros and active content. Document text is fenced as data in the prompt. Model output must match a strict schema, so any attempt to add a decision or score rejects the whole answer. Every quote the model cites is checked against the document, so invented evidence can only make a vendor look worse. Details and tests are in the [Milestone 2 controls](docs/system-security/milestone-2-app-controls.md). Consumption limits per user arrive with Amazon Bedrock in Phase 5.
 
+## AI evaluation
+
+The AI step is measured, not assumed. [`evals/`](evals/README.md) runs the real pipeline against answer keys for three fictional vendors and five prompt-injection attacks, and reports:
+
+- accuracy
+- quote accuracy
+- whether the model resisted each attack
+- whether the system still held
+- time and tokens
+
+The real model is **Claude on Amazon Bedrock**, called with an IAM role, so no API key exists anywhere. The model can only fill in one structured findings form, never take an action. Every pull request re-runs the evaluation with the offline model and fails if any score drops.
+
+*Real-model results are added after the first Bedrock run.*
+
 ## Human-in-the-loop design
 
 Five independent layers keep the AI from making a vendor decision: an output schema with no decision field, separate data stores, an explicit IAM deny, a dedicated decision service, and decision records that can't be overwritten. Details are in section 7 of the [architecture document](docs/architecture/phase-2-architecture.md).

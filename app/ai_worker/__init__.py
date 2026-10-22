@@ -5,7 +5,9 @@ The model reads, the code scores, and a person decides. This package is the
 imports app.decision, and a test enforces that (SR-12, OWASP LLM06).
 """
 
-from .pipeline import run_assessment
+from .bedrock_model import BedrockModel, ModelError
+from .models import make_model, provider
+from .pipeline import DOCUMENT_TYPES, run_assessment
 from .pretend_model import MODES, PretendModel
 
-__all__ = ["MODES", "PretendModel", "run_assessment"]
+__all__ = ["DOCUMENT_TYPES", "MODES", "BedrockModel", "ModelError", "PretendModel", "make_model", "provider", "run_assessment"]

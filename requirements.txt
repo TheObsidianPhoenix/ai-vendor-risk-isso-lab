@@ -6,3 +6,6 @@
 pypdf==6.20.1
 # Excel parsing in app/intake (only reached after the archive passes every safety check)
 openpyxl==3.1.5
+# Calls Claude on Amazon Bedrock (app/ai_worker/bedrock_model.py). Imported only
+# when COUNTERPART_MODEL_PROVIDER=bedrock; the local demo doesn't need it.
+boto3==1.43.100

@@ -16,20 +16,20 @@ import urllib.request
 from pathlib import Path
 
 from app.web.server import make_server
-from tests.helpers import SAMPLES
+from tests.helpers import SAMPLES, doc_type_for
 
 
 class Client:
     def __init__(self, base):
         self.base, self.cookie = base, None
 
-    def call(self, method, path, body=None, raw=None, filename=None, csrf=True):
+    def call(self, method, path, body=None, raw=None, filename=None, csrf=True, doc_type="other"):
         headers = {}
         if csrf:
             headers["X-Counterpart-Request"] = "1"
         data = None
         if raw is not None:
-            data, headers["X-Filename"] = raw, filename
+            data, headers["X-Filename"], headers["X-Document-Type"] = raw, filename, doc_type
         elif body is not None:
             data, headers["Content-Type"] = json.dumps(body).encode(), "application/json"
         if self.cookie:
@@ -65,7 +65,8 @@ class WebApp(unittest.TestCase):
         cls.vendor_id = body["vendor"]["id"]
         for path in sorted((SAMPLES / "nimbus-notes-ai").glob("*.*")):
             if path.suffix != ".json":
-                cls.priya.call("POST", f"/api/vendors/{cls.vendor_id}/documents", raw=path.read_bytes(), filename=path.name)
+                cls.priya.call("POST", f"/api/vendors/{cls.vendor_id}/documents", raw=path.read_bytes(), filename=path.name,
+                               doc_type=doc_type_for(path.name))
         _, body, _ = cls.priya.call("POST", f"/api/vendors/{cls.vendor_id}/assessments")
         cls.assessment = body["assessment"]
 
@@ -124,6 +125,10 @@ class WebApp(unittest.TestCase):
         self.assertEqual(dana.call("POST", "/api/settings", {"model_mode": "approves"})[0], 403)
         status, _, _ = dana.call("POST", f"/api/vendors/{self.vendor_id}/documents", raw=b"x", filename="x.pdf")
         self.assertEqual(status, 403)                                        # Reviewers don't upload
+
+    def test_document_type_is_required(self):
+        status, body, _ = self.priya.call("POST", f"/api/vendors/{self.vendor_id}/documents", raw=b"%PDF-1.7", filename="x.pdf", doc_type="")
+        self.assertEqual(status, 400)
 
     def test_rejected_upload_is_recorded_but_not_stored(self):
         status, body, _ = self.priya.call("POST", f"/api/vendors/{self.vendor_id}/documents", raw=b"MZ program", filename="policy.pdf")

@@ -56,6 +56,7 @@ Each row: threat → control → where it's implemented → the test that proves
 | Every quote must appear, word for word, at the cited page or question in a document uploaded for this vendor | `schema._check_citation` | `test_quote_must_exist_at_the_cited_location` |
 | A finding left with no real quote counts as missing evidence | `CheckedFinding.for_rules_engine` + rules engine | `test_finding_with_only_unverified_quotes_counts_as_uncited` |
 | Invented evidence can only make a vendor look worse, never better | Combination of the two above | `test_invented_evidence_never_lowers_a_score` |
+| **"Verified" needs an independent audit report** (added in Phase 5). A person labels each document's type at upload; a verified claim with no found quote from an audit report is scored as unverified. Closes the gap where a real quote from a vendor's own letter could pass the quote check | `pipeline.require_independent_evidence` | `test_vendor_written_documents_cannot_verify`, `test_unlabelled_documents_count_as_vendor_claims` |
 
 **Demo:** red team mode "model invents evidence" marks every control verified with made-up quotes. All of them are caught, and the score goes *up* to 100 Critical.
 
