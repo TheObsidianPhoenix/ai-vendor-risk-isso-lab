@@ -3,6 +3,6 @@
 # These parse untrusted vendor files, so keep them current: see SR-17.
 
 # PDF parsing in app/intake (6.20.1 includes the fixes for the denial-of-service alerts)
-pypdf==6.20.1
+pypdf==6.21.1
 # Excel parsing in app/intake (only reached after the archive passes every safety check)
 openpyxl==3.1.5
