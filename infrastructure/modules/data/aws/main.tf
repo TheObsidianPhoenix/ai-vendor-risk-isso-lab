@@ -14,6 +14,12 @@
 #
 # All tables: on-demand billing (no charge when idle), encrypted with the
 # project key, point-in-time recovery, and deletion protection.
+#
+# Retention (Phase 2, section 8): every item carries expires_at, a Unix time
+# set by the application: 3 years after the item was written, with the vendor
+# record pushed forward on every activity so an active vendor never expires.
+# DynamoDB's built-in expiry (TTL) deletes items after that time, at no extra
+# cost, so nothing is kept longer than the retention policy allows.
 
 locals {
   tables = {
@@ -70,5 +76,10 @@ resource "aws_dynamodb_table" "this" {
 
   point_in_time_recovery {
     enabled = true
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
   }
 }

@@ -70,6 +70,14 @@ class CounterpartApp:
         self.sessions = auth.Sessions(clock) if clock else auth.Sessions()
         self.settings = {"model_mode": "normal"}
         self.quiet = False
+        self.purge_expired()
+
+    def purge_expired(self) -> dict:
+        """Apply the retention rule (also the local stand-in for DynamoDB TTL and S3 lifecycle)."""
+        removed = self.store.purge_expired()
+        if any(removed.values()):
+            self.audit.record(actor="system", role="system", action="retention.purge", details=removed)
+        return removed
 
     # ----- routing ---------------------------------------------------------------
     def routes(self):
