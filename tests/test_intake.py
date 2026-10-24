@@ -187,6 +187,14 @@ class TypeAndSizeChecks(unittest.TestCase):
         self.assertRejected(scan_file(make_pdf(), "policy.xlsx"), "content is PDF")
         self.assertRejected(scan_file(make_xlsx(), "answers.pdf"), "content is XLSX")
 
+    def test_php_script_is_rejected_whatever_its_name(self):
+        # Counterpart runs no PHP (see docs/system-security/vulnerability-applicability.md).
+        # A vendor's script is refused at the door, even if renamed to look like a PDF.
+        script = b"<?php echo 'harmless test'; ?>"
+        for name in ("shell.php", "policy.pdf", "answers.xlsx", "policy.pdf.php"):
+            with self.subTest(name=name):
+                self.assertRejected(scan_file(script, name), "Not a PDF")
+
     def test_damaged_pdf_is_rejected_not_crashed(self):
         self.assertRejected(scan_file(b"%PDF-1.7\n garbage", "policy.pdf"), "")
 
