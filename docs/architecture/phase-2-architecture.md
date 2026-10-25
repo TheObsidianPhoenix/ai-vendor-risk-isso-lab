@@ -552,6 +552,7 @@ AWS created the account through its newer sign-up experience, which works differ
 | D-09 | GuardDuty, Security Hub and AWS Config not always on | Run them continuously | They cost money monthly. If free trials are available, we can turn them on for a short window to capture findings as evidence, then turn them off. |
 | D-10 | Single region, no high availability | Multi-region | Matches the Phase 1 assumption. Point-in-time recovery and versioning cover accidental deletion. |
 | D-11 | **Decided 2026-10-22:** upgraded to the paid plan with a **$20 monthly spend limit** (the lowest offered). Advanced features **not** activated | Stay on the free plan; or activate advanced features | The paid plan is needed for Bedrock and for the app to stay online while job hunting. The $20 hard cap bounds the worst case (a runaway AI loop or cost abuse, OWASP LLM10), with budget alerts at $5 and $10 well before it. Advanced features stay off: irreversible, they remove the spend limit, and nothing in the design needs them yet. |
+| D-12 | **Decided 2026-10-25:** test with public Level 1 CAIQs from the CSA STAR Registry, kept local and private ([rules](../risk-management/real-vendor-testing.md)) | Synthetic data only; or ask vendors for NDA documents | Real-world signal (formatting, length, false positives) without committing real documents. Per-company results stay private; only totals are published. Files are never committed and never uploaded to AWS under the current authorization. |
 
 These decisions feed directly into the Phase 10 risk register and POA&M.
 
