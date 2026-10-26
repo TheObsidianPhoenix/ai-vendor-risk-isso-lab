@@ -20,7 +20,7 @@ The three synthetic vendors prove the controls work against problems I planted. 
 
 ## The test set
 
-Eight Level 1 CAIQs (spreadsheets), chosen to cover different industries:
+Nine Level 1 CAIQs (spreadsheets), chosen to cover different industries:
 
 | Industry | Companies |
 |---|---|
@@ -32,6 +32,7 @@ Eight Level 1 CAIQs (spreadsheets), chosen to cover different industries:
 | Banking | GTBank |
 | Application security | Aikido Security |
 | AI security operations | Andesite |
+| Legal technology (eDiscovery) | Everlaw |
 
 ## What to expect
 
