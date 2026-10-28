@@ -38,5 +38,5 @@ Nine Level 1 CAIQs (spreadsheets), chosen to cover different industries:
 
 - **No Level 1 vendor can score Low.** With only self-attested answers, the best possible result is **High: 66 points**, or **72** when the vendor uses AI on customer data. Any critical control left blank adds 25 points and usually makes it Critical. This is the independent-evidence rule working as designed, and under decision option D such a vendor would be sent an evidence request rather than rated as if its evidence were bad.
 - **Intake may flag or reject some files.** Real CAIQs can contain hidden sheets, hidden columns or formulas. Each flag or rejection is recorded as a finding about the scanner's false-positive rate.
-- **Full CAIQs will likely exceed the 120,000-character limit** for one AI call, and stop safely with "Documents are too long". Fixing that (assessing one control area at a time) is the next piece of work.
+- **Full CAIQs exceed the 120,000-character limit** for one AI call, so they're assessed one control area at a time ([retrieval by control area](../system-security/retrieval-by-control-area.md)). Record in the worksheet how many passes each one took and whether any pass hit the size cap.
 - **The local pretend model can't assess real companies.** It only knows the synthetic vendors. Real results need the Bedrock model.
