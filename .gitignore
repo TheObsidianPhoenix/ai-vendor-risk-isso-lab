@@ -19,6 +19,10 @@ credentials.*
 # Unredacted evidence. Keep originals here; commit only redacted copies.
 evidence/raw/
 
+# Real vendor documents for local testing (D-12). Keep them outside the repo; this is a backstop.
+counterpart-real-tests/
+real-vendor-docs/
+
 # Terraform: state can contain sensitive values and lives in S3, not Git
 .terraform/
 *.tfstate
