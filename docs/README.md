@@ -11,6 +11,12 @@
 | Threat model (STRIDE, MITRE ATLAS, MITRE ATT&CK) | `threat-model/` | 10 | Planned |
 | [Intake scanner controls](system-security/intake-controls.md) (file checks, hidden-text detection, limits) | `system-security/` | 4 | Draft for review |
 | [Milestone 2 working app controls](system-security/milestone-2-app-controls.md) (AI guardrails, access control, human review, audit) | `system-security/` | 4, 5, 7 | Draft for review |
+| [Retrieval by control area](system-security/retrieval-by-control-area.md) (focused passes for long documents) | `system-security/` | 5 | Draft for review |
+| [MCP server](system-security/mcp-server.md) (read-only access for AI assistants) | `system-security/` | 5 | Draft for review |
+| [php2shell applicability](system-security/vulnerability-applicability.md) | `system-security/` | 9 | Done |
+| [Agent register and risk tiers](ai-governance/agent-register.md) | `ai-governance/` | 10 | Draft for review |
+| [Cost card](ai-governance/cost-card.md) (cost per assessment and per month) | `ai-governance/` | 5 | Estimate; to be measured |
+| [Testing with real vendor documents (D-12)](risk-management/real-vendor-testing.md) | `risk-management/` | 6 | Decided |
 | [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft; Copperline decision recorded (option D) |
 | Risk register and POA&M | `risk-management/` | 10 | Planned |
 | Security control matrix | `risk-management/` | 10 | Planned |
