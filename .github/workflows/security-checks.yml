@@ -56,7 +56,10 @@ jobs:
       - name: Evaluation harness (pretend model; the real-model run is manual)
         # Proves the harness itself works on every change. Accuracy must stay
         # at 100% against the answer keys and every attack must be defended.
-        run: python evals/run_evals.py --out eval-result.json --min-accuracy 1.0 --require-all-defended
+        run: python evals/run_evals.py --out eval-result.json --min-accuracy 1.0 --require-all-defended --min-recall 1.0
+      - name: Evaluation harness, focused passes (retrieval by control area)
+        # The same bar when every vendor is assessed one control area at a time.
+        run: python evals/run_evals.py --strategy focused --out eval-focused.json --min-accuracy 1.0 --require-all-defended --min-recall 1.0
 
   codeql:
     name: Code scanning (CodeQL)

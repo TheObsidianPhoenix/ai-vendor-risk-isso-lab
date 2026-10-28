@@ -4,6 +4,7 @@ quality, injection resistance, and cost.
     python evals/run_evals.py                     # pretend model, offline (checks the harness)
     python evals/run_evals.py --model bedrock     # the real model; needs AWS credentials and
                                                   # COUNTERPART_BEDROCK_MODEL_ID
+    python evals/run_evals.py --strategy focused  # one pass per control area (retrieval)
 
 Writes a JSON result to evals/results/ and prints a Markdown scorecard.
 Every number comes from running the same pipeline the app uses: intake
@@ -18,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import statistics
 import sys
 from datetime import datetime, timezone
@@ -27,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.ai_worker import BedrockModel, PretendModel, run_assessment  # noqa: E402
+from app.ai_worker.retrieval import select  # noqa: E402
 from app.intake import scan_file  # noqa: E402
 from app.intake.result import INJECTION_FLAG_KINDS  # noqa: E402
 from evals.attacks import ATTACKS, attack_pdf  # noqa: E402
@@ -35,6 +38,7 @@ from tests.helpers import doc_type_for  # noqa: E402
 SAMPLES = ROOT / "sample-data"
 VENDORS = ("nimbus-notes-ai", "copperline-backup", "kestrel-payroll-cloud")
 ATTACK_TARGET = "copperline-backup"
+STRATEGY = "auto"   # Set from --strategy
 
 
 def intake(filename: str, data: bytes) -> dict:
@@ -55,7 +59,34 @@ def assess(vendor: str, documents: list[dict], model) -> dict:
     key = json.loads((SAMPLES / vendor / "expected-findings.json").read_text())
     return run_assessment(vendor_id=vendor, vendor_name=key["vendor"],
                           uses_ai_on_customer_data=key["uses_ai_on_customer_data"],
-                          documents=documents, model=model)
+                          documents=documents, model=model, strategy=STRATEGY)
+
+
+def retrieval_recall() -> dict:
+    """Model-free check: is every source named in the answer keys among the
+    sections retrieval picks for its category? A miss means a focused pass
+    would never see that evidence."""
+    found, total, misses = 0, 0, []
+    for vendor in VENDORS:
+        docs = {d["filename"]: [tuple(s) for s in d["segments"]] for d in vendor_documents(vendor)}
+        key = json.loads((SAMPLES / vendor / "expected-findings.json").read_text())
+        for category, item in key["expected_findings"].items():
+            picked = select(category, docs).documents
+            for source in item["sources"]:
+                document, where = source.split(" ", 1)
+                sent = picked.get(document, [])
+                page = re.match(r"p(\d+)", where)
+                if page:
+                    wanted, have = [f"page {page.group(1)}"], [loc for loc, _ in sent]
+                else:
+                    wanted, have = re.findall(r"[A-Z]+-\d+", where), [t.split(" | ", 1)[0].strip() for _, t in sent]
+                for item_id in wanted:
+                    total += 1
+                    if item_id in have:
+                        found += 1
+                    else:
+                        misses.append(f"{vendor} {category}: {document} {item_id}")
+    return {"found": found, "total": total, "recall": round(found / max(1, total), 3), "misses": misses}
 
 
 def states(result: dict, which: str = "proposed_state") -> dict:
@@ -125,7 +156,13 @@ def main() -> int:
                         help="exit with an error if evidence-state accuracy is below this (0 to 1)")
     parser.add_argument("--require-all-defended", action="store_true",
                         help="exit with an error if any injection attack changed a vendor's rating")
+    parser.add_argument("--strategy", choices=("auto", "single", "focused"), default="auto",
+                        help="one call per vendor, one focused pass per control area, or choose by length")
+    parser.add_argument("--min-recall", type=float, default=0.0,
+                        help="exit with an error if retrieval recall is below this (0 to 1)")
     args = parser.parse_args()
+    global STRATEGY
+    STRATEGY = args.strategy
     model = PretendModel() if args.model == "pretend" else BedrockModel()
 
     accuracy = [accuracy_run(v, model) for v in VENDORS]
@@ -147,14 +184,18 @@ def main() -> int:
         "median_latency_ms": statistics.median([u["latency_ms"] for u in runs]) if runs else None,
         "total_input_tokens": sum(u["input_tokens"] for u in runs) if runs else None,
         "total_output_tokens": sum(u["output_tokens"] for u in runs) if runs else None,
+        "model_calls": sum(u.get("calls", 1) for u in runs) if runs else None,
+        "strategy": args.strategy,
     }
+    recall = retrieval_recall()
+    summary["retrieval_recall"] = recall["recall"]
     price_in, price_out = os.environ.get("PRICE_PER_MTOK_INPUT"), os.environ.get("PRICE_PER_MTOK_OUTPUT")
     if runs and price_in and price_out:
         summary["estimated_cost_usd"] = round(summary["total_input_tokens"] / 1e6 * float(price_in)
                                               + summary["total_output_tokens"] / 1e6 * float(price_out), 4)
 
     report = {"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "model": model.model_id,
-              "summary": summary, "accuracy": accuracy, "attacks": attacks}
+              "summary": summary, "retrieval": recall, "accuracy": accuracy, "attacks": attacks}
     out = args.out or ROOT / "evals" / "results" / f"{datetime.now(timezone.utc):%Y-%m-%d}-{args.model}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2) + "\n")
@@ -165,6 +206,8 @@ def main() -> int:
         failures.append(f"accuracy {summary['category_accuracy']:.0%} is below {args.min_accuracy:.0%}")
     if args.require_all_defended and summary["attacks_defended"] < summary["attacks_total"]:
         failures.append(f"{summary['attacks_total'] - summary['attacks_defended']} attack(s) changed a vendor's rating")
+    if summary["retrieval_recall"] < args.min_recall:
+        failures.append(f"retrieval recall {summary['retrieval_recall']:.0%} is below {args.min_recall:.0%}: {recall['misses'][:5]}")
     for failure in failures:
         print(f"::error title=Evaluation::{failure}")
     return 1 if failures else 0
@@ -179,10 +222,13 @@ def scorecard(report: dict) -> str:
              f"| Quotes found word for word in the documents | {s['citations_verified_rate']:.0%} |",
              f"| Injection attacks the model itself resisted | {s['attacks_model_resisted']} of {s['attacks_total']} |",
              f"| Injection attacks the system defended (rating unchanged) | {s['attacks_defended']} of {s['attacks_total']} |",
-             f"| ...of which the intake scanner also flagged | {s['attacks_caught_at_intake']} of {s['attacks_total']} |"]
+             f"| ...of which the intake scanner also flagged | {s['attacks_caught_at_intake']} of {s['attacks_total']} |",
+             f"| Answer-key sources found by retrieval | {s['retrieval_recall']:.0%} |",
+             f"| Strategy | {s['strategy']} |"]
     if s.get("median_latency_ms") is not None:
         lines.append(f"| Median time per assessment | {s['median_latency_ms'] / 1000:.1f} s |")
         lines.append(f"| Tokens used (input / output) | {s['total_input_tokens']:,} / {s['total_output_tokens']:,} |")
+        lines.append(f"| Model calls | {s['model_calls']} |")
     if "estimated_cost_usd" in s:
         lines.append(f"| Estimated cost of this run | ${s['estimated_cost_usd']} |")
     lines += ["", "| Vendor | States correct | Score (expected) | Quotes verified |", "|---|---|---|---|"]
