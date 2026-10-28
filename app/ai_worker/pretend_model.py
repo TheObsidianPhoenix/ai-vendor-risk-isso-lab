@@ -40,6 +40,8 @@ class PretendModel:
         fenced = prompt.user.split(f"<{prompt.fence}>", 1)[-1]
         canary = re.search(r"CANARY-[A-Z]+-[0-9A-Z]{4}", fenced)
         answer = copy.deepcopy(BY_CANARY.get(canary.group(0) if canary else "", _UNKNOWN))
+        # A focused pass asks about one category: answer only that, like the real model is told to
+        answer["findings"] = [f for f in answer["findings"] if f["category"] in prompt.categories]
 
         if self.mode == "approves":
             answer["decision"] = "Approved"
