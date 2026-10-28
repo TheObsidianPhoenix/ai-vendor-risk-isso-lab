@@ -367,13 +367,17 @@ The rule "the AI must never approve or reject a vendor" is enforced in five inde
 
 | Data | Where | Encrypted with | Retention | How it's removed |
 |---|---|---|---|---|
-| Uploaded files awaiting checks | `quarantine` bucket | KMS key | 1 day | Lifecycle rule deletes it |
-| Checked files and extracted text | `documents` bucket | KMS key | 3 years after last assessment (proposed) | Lifecycle rule; earlier deletion by an admin request is logged |
-| Vendors, assessments, decisions | DynamoDB | KMS key | Same as the vendor's documents | Deleted with the vendor; decision records kept as long as their audit events |
-| Audit events and CloudTrail logs | `audit` bucket | KMS key | Object Lock 30 days in the lab; 1 year proposed for production | Lifecycle rule after retention ends |
+| Uploaded files awaiting checks | `quarantine` bucket | KMS key | 1 day | Lifecycle rule deletes it, checked or not |
+| Rejected uploads | **Never stored** | n/a | n/a | Only the file's hash and the rejection reason go in the audit log |
+| Checked files and extracted text | `documents` bucket | KMS key | 3 years (proposed); replaced versions 30 days | Lifecycle rule; earlier deletion by an admin request is logged |
+| Vendors, assessments, decisions | DynamoDB | KMS key | 3 years after each record is written; a vendor's record moves forward with every activity, so an active vendor never expires | DynamoDB expiry (TTL) on the `expires_at` field. A vendor's documents, assessments and decisions never outlive it, since each is written no later than the vendor's latest activity. Locally, `Store.purge_expired()` applies the same rule on startup and writes a `retention.purge` audit event |
+| Audit events and CloudTrail logs | `audit` bucket | KMS key | Object Lock 30 days in the lab (1 year proposed for production); kept 1 year | Lifecycle rule after retention ends |
+| Document text sent to the model | Amazon Bedrock, for one call | TLS in transit | Not stored by the application | AWS states Bedrock doesn't use prompts and completions to train models. Its data retention terms are confirmed before the first real-model run (section 14) |
 | Function logs | CloudWatch Logs | KMS key | 90 days | Log group retention setting |
 
 All traffic uses TLS: browser to CloudFront and API Gateway, and every call between AWS services.
+
+**Who sets retention:** the 3-year period is a proposal for this lab. In a real organization, the records management or legal team sets it, and this table is updated to match.
 
 **Secure deletion:** S3 and DynamoDB don't offer "overwrite with zeros." In the cloud, deletion plus encryption is the accepted approach: data is unreadable without the key, and deleting the key (after its waiting period) makes every copy, including backups, permanently unreadable. Tearing down the lab ends with scheduling the key for deletion. This is sometimes called crypto-shredding.
 
