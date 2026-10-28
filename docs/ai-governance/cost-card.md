@@ -34,6 +34,7 @@ Produced by `python evals/cost_card.py`, at Sonnet 5.5 prices of $2.00 per milli
 | Prices | Inputs to the script | See below; **check the Bedrock pricing page before relying on them** |
 
 Price sources used (third-party summaries of Anthropic's announcements, October 2026; not confirmed against AWS directly):
+
 - Claude Sonnet 5.5: $2.00 input and $10.00 output per million tokens ([Apidog summary](https://apidog.com/blog/claude-sonnet-5-5-pricing/)).
 - Claude Haiku 5.5 on Bedrock: $0.10 input and $0.50 output per million tokens for requests up to 100,000 input tokens; $0.50 and $2.50 above that ([pi.dev model page](https://pi.dev/models/amazon-bedrock/anthropic-claude-haiku-5-5?name=pi)). Every Counterpart call stays under 100,000 input tokens, so the lower tier applies.
 
