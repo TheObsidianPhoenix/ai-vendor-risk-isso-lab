@@ -4,7 +4,7 @@
 |---|---|
 | **System** | Counterpart, Meridian Trust Labs (fictional) |
 | **Covers** | `infrastructure/bootstrap` and `infrastructure/environments/dev` (foundation layer) |
-| **Status** | Stage 0 decisions made 2026-10-22 (guardrail check remains). **Nothing deployed yet** |
+| **Status** | Bootstrap applied 2026-10-28: the state bucket exists. GitHub OIDC is off (D-14), so the foundation is applied by hand from CloudShell |
 | **Builds on** | [Phase 2 Architecture](phase-2-architecture.md), sections 10 to 13 |
 
 ## What the foundation layer costs
@@ -29,7 +29,21 @@ These must be settled before anything is created. Record each answer in the Phas
 - [ ] **Guardrails allow what we need.** Confirm the account's managed policies don't block: KMS customer managed keys, S3 Object Lock, CloudTrail, DynamoDB, EventBridge, Budgets, and creating an IAM OIDC provider and roles. The quickest real test is Stage 1's `terraform plan`, which fails clearly on anything blocked.
 - [x] **Budget alarms are on** before the upgrade (Phase 0 zero-spend budget).
 
+## Decision D-14: no GitHub OIDC in this account (2026-10-28)
+
+The first bootstrap apply created the state bucket, then stopped: **AccessDenied on `iam:CreateOpenIDConnectProvider`, an explicit deny in a service control policy.** The account was created through AWS's **Projects** setup, which manages the organization and pre-configures its policies. Changing them means activating advanced features, which is irreversible and removes the $20 spend limit (D-11). That's a bad trade for convenience.
+
+| Option | Decision |
+|---|---|
+| Activate advanced features and loosen the policy | **No.** Loses the hard spend cap, and can't be undone |
+| Long-lived AWS access keys stored in GitHub | **No.** Reverses the "no keys anywhere" design |
+| **Apply by hand from CloudShell** after a pull request passes its checks and is merged | **Yes.** Still no keys; a person reads every plan before applying it |
+
+The bootstrap's OIDC provider and roles are now behind `enable_github_oidc` (default `false`). The organization-level deny is itself evidence: a preventive control blocked a new identity provider, even for an admin role.
+
 ## Stage 1: Bootstrap (once, by hand, in AWS CloudShell)
+
+**CloudShell disk space:** your home folder holds about 1 GB, and the AWS provider plugin is large. If `terraform init` fails with "no space left on device", delete the Terraform download zip and the `.terraform` folder, then retry. Or keep plugins in temporary space with `export TF_DATA_DIR=/tmp/tf-<folder>` (re-run it and `init` in each new CloudShell session). Paste one command per line; CloudShell's multi-line paste can join lines together.
 
 CloudShell is a terminal inside the AWS console, already signed in as you. Nothing gets installed on your Mac.
 
@@ -56,7 +70,23 @@ CloudShell is a terminal inside the AWS console, already signed in as you. Nothi
 
 Evidence to capture (redact the account number): the plan summary line, the outputs, and the OIDC role's trust policy in the IAM console showing the `repo:...:ref:refs/heads/main` condition.
 
-## Stage 2: Connect GitHub (no keys)
+## Stage 2 (this account): apply the foundation by hand
+
+After each infrastructure pull request merges, in the **project account's** CloudShell:
+
+```bash
+cd ~/ai-vendor-risk-isso-lab && git pull
+cd infrastructure/environments/dev
+cp terraform.tfvars.example terraform.tfvars    # first time only; set alert_email
+~/bin/terraform init -backend-config="bucket=<state_bucket output>"
+~/bin/terraform plan -out dev.plan
+~/bin/terraform show -json dev.plan | jq -r '.resource_changes[] | "\(.change.actions | join(",")) \(.address)"'
+~/bin/terraform apply dev.plan                  # only after reading the plan
+```
+
+Read the plan's summary line and the list before applying. Anything marked `delete` or `update` that the pull request didn't describe means stop.
+
+## Stage 2 (accounts that allow OIDC): Connect GitHub (no keys)
 
 In the repository, open **Settings → Secrets and variables → Actions → New repository secret** and add:
 
@@ -68,7 +98,7 @@ In the repository, open **Settings → Secrets and variables → Actions → New
 
 These aren't passwords, but they include your account number, and this repository's workflow logs are public. Secrets keep them masked. There are still **no AWS access keys anywhere**: GitHub trades a signed token for credentials that expire within the hour.
 
-## Stage 3: Plan on pull requests, apply on merge
+## Stage 3 (accounts that allow OIDC): Plan on pull requests, apply on merge
 
 A follow-up pull request adds the deploy workflow:
 

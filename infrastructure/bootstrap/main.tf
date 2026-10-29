@@ -12,6 +12,13 @@
 #      github-deploy: only the main branch, so only reviewed, merged code can
 #                     change the account (CM-3, change control).
 #
+# GitHub OIDC is OFF by default (decision D-14): this account was created
+# through AWS's managed "Projects" setup, whose pre-configured organization
+# policy denies creating OIDC providers, and changing that would mean
+# activating advanced features (irreversible; removes the $20 spend limit,
+# D-11). Deployments are applied by hand from CloudShell instead, still with
+# no access keys. Set enable_github_oidc = true in an account that allows it.
+#
 # Its own state stays local (in this folder, git-ignored), because the state
 # bucket doesn't exist until this runs. Keep that file safe, or re-import.
 
@@ -143,16 +150,18 @@ resource "aws_s3_bucket_policy" "state" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_openid_connect_provider" "github" {
+  count          = var.enable_github_oidc ? 1 : 0
   url            = "https://${local.oidc_host}"
   client_id_list = ["sts.amazonaws.com"]
 }
 
 data "aws_iam_policy_document" "trust_plan" {
+  count = var.enable_github_oidc ? 1 : 0
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [aws_iam_openid_connect_provider.github[0].arn]
     }
     condition {
       test     = "StringEquals"
@@ -170,11 +179,12 @@ data "aws_iam_policy_document" "trust_plan" {
 }
 
 data "aws_iam_policy_document" "trust_deploy" {
+  count = var.enable_github_oidc ? 1 : 0
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [aws_iam_openid_connect_provider.github[0].arn]
     }
     condition {
       test     = "StringEquals"
@@ -191,14 +201,16 @@ data "aws_iam_policy_document" "trust_deploy" {
 }
 
 resource "aws_iam_role" "plan" {
+  count                = var.enable_github_oidc ? 1 : 0
   name                 = "counterpart-github-plan"
   description          = "Read-only: lets pull requests show what Terraform would change"
-  assume_role_policy   = data.aws_iam_policy_document.trust_plan.json
+  assume_role_policy   = data.aws_iam_policy_document.trust_plan[0].json
   max_session_duration = 3600
 }
 
 resource "aws_iam_role_policy_attachment" "plan_read_only" {
-  role       = aws_iam_role.plan.name
+  count      = var.enable_github_oidc ? 1 : 0
+  role       = aws_iam_role.plan[0].name
   policy_arn = "arn:${local.partition}:iam::aws:policy/ReadOnlyAccess"
 }
 
@@ -230,20 +242,23 @@ data "aws_iam_policy_document" "plan_limits" {
 }
 
 resource "aws_iam_role_policy" "plan_limits" {
+  count  = var.enable_github_oidc ? 1 : 0
   name   = "limits"
-  role   = aws_iam_role.plan.id
+  role   = aws_iam_role.plan[0].id
   policy = data.aws_iam_policy_document.plan_limits.json
 }
 
 resource "aws_iam_role" "deploy" {
+  count                = var.enable_github_oidc ? 1 : 0
   name                 = "counterpart-github-deploy"
   description          = "Applies reviewed Terraform from the main branch"
-  assume_role_policy   = data.aws_iam_policy_document.trust_deploy.json
+  assume_role_policy   = data.aws_iam_policy_document.trust_deploy[0].json
   max_session_duration = 3600
 }
 
 resource "aws_iam_role_policy" "deploy" {
+  count  = var.enable_github_oidc ? 1 : 0
   name   = "deploy-counterpart"
-  role   = aws_iam_role.deploy.id
+  role   = aws_iam_role.deploy[0].id
   policy = data.aws_iam_policy_document.deploy.json
 }
