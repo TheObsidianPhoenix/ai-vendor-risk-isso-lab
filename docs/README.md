@@ -14,6 +14,7 @@
 | [Retrieval by control area](system-security/retrieval-by-control-area.md) (focused passes for long documents) | `system-security/` | 5 | Draft for review |
 | [MCP server](system-security/mcp-server.md) (read-only access for AI assistants) | `system-security/` | 5 | Draft for review |
 | [php2shell applicability](system-security/vulnerability-applicability.md) | `system-security/` | 9 | Done |
+| [FedRAMP in Counterpart](system-security/fedramp.md) (D-13 requirement and readiness self-check) | `system-security/` | 7, 10 | Draft for review |
 | [Agent register and risk tiers](ai-governance/agent-register.md) | `ai-governance/` | 10 | Draft for review |
 | [Cost card](ai-governance/cost-card.md) (cost per assessment and per month) | `ai-governance/` | 5 | Estimate; to be measured |
 | [Testing with real vendor documents (D-12)](risk-management/real-vendor-testing.md) | `risk-management/` | 6 | Decided |

@@ -38,7 +38,7 @@ FRESH_SIGN_IN_SECONDS = 15 * 60  # A decision needs a sign-in within the last 15
 # What each role may do. Anything not listed is denied (default deny).
 PERMISSIONS = {
     "app_user": {"vendor.create", "vendor.view_own", "document.upload_own", "assessment.run_own"},
-    "reviewer": {"vendor.view_all", "assessment.run_any", "decision.record"},
+    "reviewer": {"vendor.view_all", "assessment.run_any", "decision.record", "vendor.verify_fedramp"},
     "admin": {"audit.view", "settings.change", "users.view"},
     "isso": {"vendor.view_all", "audit.view", "users.view"},
 }

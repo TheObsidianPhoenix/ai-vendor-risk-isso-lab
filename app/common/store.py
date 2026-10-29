@@ -98,6 +98,14 @@ class Store:
     def get_vendor(self, vendor_id: str) -> dict | None:
         return self._all("vendors").get(vendor_id)
 
+    def set_vendor_fedramp(self, vendor_id: str, record: dict) -> dict:
+        """A reviewer's FedRAMP Marketplace check (D-13). Replaces the previous check; activity extends retention."""
+        with self._lock:
+            vendor = self.get_vendor(vendor_id)
+            if vendor is None:
+                raise KeyError(vendor_id)
+            return self._put("vendors", dict(vendor, fedramp=record, expires_at=self._expiry()))
+
     def list_vendors(self) -> list[dict]:
         return sorted(self._all("vendors").values(), key=lambda v: v["created_at"])
 

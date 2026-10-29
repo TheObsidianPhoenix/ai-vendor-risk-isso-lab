@@ -13,6 +13,7 @@ rule that fails refuses the decision and nothing is written.
 | An assessment's final decision is never changed or replaced | No overwrites |
 | A Critical vendor needs a second, different reviewer to approve | HR-06, FR-11 |
 | Approving a High or Critical vendor, or rejecting a Low one, is an override | HR-05 |
+| A vendor handling federal data without the FedRAMP level it needs can't get a plain "Approved"; "Approved with Conditions" is an exception and an override | D-13 |
 
 The AI component has no path to this module: app.ai_worker never imports it,
 and in AWS the AI worker's IAM role is explicitly denied the decisions table.
@@ -21,6 +22,8 @@ and in AWS the AI worker's IAM role is explicitly denied the decisions table.
 from __future__ import annotations
 
 from app.common.auth import PermissionDenied, Session
+
+from . import fedramp
 
 DECISIONS = ("Approved", "Approved with Conditions", "Further Review Required", "Rejected")
 APPROVALS = {"Approved", "Approved with Conditions"}
@@ -71,6 +74,12 @@ def record_decision(*, store, audit, session: Session, assessment_id: str, decis
     if not evidence_confirmed:
         refuse("Confirm that you examined the source evidence")
 
+    federal = fedramp.requirement(vendor)
+    if decision == "Approved" and not federal["met"]:
+        refuse(f"FedRAMP requirement not met ({federal['reason']}). Reject, ask for review, or approve with "
+               "conditions that say how the gap is handled")
+    fedramp_exception = decision in APPROVALS and not federal["met"]
+
     earlier = [d for d in store.list_decisions(vendor["id"]) if d["assessment_id"] == assessment_id]
     if any(d["stage"] == "final" for d in earlier):
         refuse("This assessment already has a final decision. Decisions are never changed; run a new assessment instead")
@@ -86,7 +95,8 @@ def record_decision(*, store, audit, session: Session, assessment_id: str, decis
         stage = "final"
 
     override = ((decision in APPROVALS and classification in ("High", "Critical"))
-                or (decision == "Rejected" and classification == "Low"))
+                or (decision == "Rejected" and classification == "Low")
+                or fedramp_exception)
 
     record = store.append_decision({
         "vendor_id": vendor["id"],
@@ -103,12 +113,15 @@ def record_decision(*, store, audit, session: Session, assessment_id: str, decis
         "reviewer_name": user.name,
         "stage": stage,
         "override": override,
+        "fedramp_requirement": federal,
+        "fedramp_exception": fedramp_exception,
         "second_approval_of": pending[-1]["id"] if pending else None,
         "prompt_injection_flagged": assessment["score"]["prompt_injection_flagged"],
     })
     audit.record(actor=user.id, role=user.role, action="decision.record", target=assessment_id,
                  details={"vendor_id": vendor["id"], "decision": decision, "stage": stage,
-                          "override": override, "classification": classification})
+                          "override": override, "classification": classification,
+                          "fedramp_exception": fedramp_exception})
     return record
 
 

@@ -30,8 +30,8 @@ from urllib.parse import urlparse
 from app.ai_worker import DOCUMENT_TYPES, MODES, make_model, provider, run_assessment
 from app.common import auth
 from app.common.audit import AuditLog
-from app.common.store import Store
-from app.decision import DECISIONS, DecisionRefused, record_decision, vendor_status
+from app.common.store import Store, now
+from app.decision import DECISIONS, DecisionRefused, fedramp, record_decision, vendor_status
 from app.intake import DEFAULT_LIMITS, scan_file
 from app.intake.result import INJECTION_FLAG_KINDS
 from app.rules_engine import RULE_SET_VERSION, ruleset
@@ -91,6 +91,7 @@ class CounterpartApp:
             ("POST", r"/api/vendors", self.create_vendor, True),
             ("GET", rf"/api/vendors/(?P<vendor_id>{ID})", self.get_vendor, True),
             ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/documents", self.upload, True),
+            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/fedramp", self.record_fedramp, True),
             ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/assessments", self.assess, True),
             ("POST", rf"/api/assessments/(?P<assessment_id>{ID})/decisions", self.decide, True),
             ("GET", r"/api/audit", self.audit_log, True),
@@ -126,6 +127,7 @@ class CounterpartApp:
                     score=score["score"] if score else None,
                     classification=score["classification"] if score else None,
                     injection_flagged=bool(latest and latest["injection_flags"]),
+                    fedramp_requirement=fedramp.requirement(vendor),
                     document_count=len(self.store.list_documents(vendor["id"])))
 
     # ----- handlers --------------------------------------------------------------
@@ -181,10 +183,14 @@ class CounterpartApp:
         uses_ai = body.get("uses_ai_on_customer_data")
         if not isinstance(uses_ai, bool):
             raise ApiError(400, "Say whether the vendor uses AI on our data")
+        federal = body.get("federal_data_impact", "none")
+        if federal not in fedramp.IMPACT_LEVELS:
+            raise ApiError(400, "Say whether the vendor will handle federal data, and at what impact level")
         vendor = self.store.create_vendor(name=name, service=service, data_shared=data_shared,
-                                          uses_ai_on_customer_data=uses_ai, owner_id=session.user.id,
-                                          owner_name=session.user.name)
-        self._log(session, "vendor.create", vendor["id"], uses_ai_on_customer_data=uses_ai)
+                                          uses_ai_on_customer_data=uses_ai, federal_data_impact=federal,
+                                          owner_id=session.user.id, owner_name=session.user.name)
+        self._log(session, "vendor.create", vendor["id"], uses_ai_on_customer_data=uses_ai,
+                  federal_data_impact=federal)
         return {"vendor": vendor}
 
     def get_vendor(self, session, body, vendor_id, **_):
@@ -204,12 +210,28 @@ class CounterpartApp:
                 "upload": auth.can_upload(user, vendor),
                 "assess": auth.can_run_assessment(user, vendor),
                 "decide": user.has("decision.record"),
+                "verify_fedramp": user.has("vendor.verify_fedramp"),
                 "decide_blocked_reason": ("Separation of duties: you requested this vendor or uploaded its documents"
                                           if user.id == vendor["owner_id"] or user.id in uploaders else None),
             },
             "decision_options": DECISIONS,
             "document_types": DOCUMENT_TYPES,
+            "fedramp_levels": list(fedramp.LEVELS),
         }
+
+    def record_fedramp(self, session, body, vendor_id, **_):
+        """A reviewer records what the FedRAMP Marketplace shows for this vendor (D-13)."""
+        self._require(session, "vendor.verify_fedramp", "vendor.fedramp")
+        vendor = self._visible_vendor(session, vendor_id)
+        try:
+            record = fedramp.validate_status(body if isinstance(body, dict) else {})
+        except ValueError as problem:
+            raise ApiError(400, str(problem)) from None
+        record.update(recorded_by=session.user.id, recorded_by_name=session.user.name, recorded_at=now())
+        vendor = self.store.set_vendor_fedramp(vendor_id, record)
+        self._log(session, "vendor.fedramp", vendor_id, status=record["status"], level=record["level"],
+                  checked_on=record["checked_on"])
+        return {"vendor": self._vendor_summary(vendor)}
 
     def upload(self, session, body, vendor_id, raw=b"", filename="", doc_type="", **_):
         vendor = self._visible_vendor(session, vendor_id)
