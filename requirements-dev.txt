@@ -5,4 +5,4 @@
 -r requirements.txt
 
 # Used by scripts/generate_sample_data.py, scripts/verify_sample_data.py and the tests
-reportlab==5.0.1
+reportlab==5.1.0
