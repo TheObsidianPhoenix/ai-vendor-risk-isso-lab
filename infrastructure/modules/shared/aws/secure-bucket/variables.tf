@@ -10,6 +10,12 @@ variable "name_prefix" {
 variable "purpose" {
   description = "One line saying what the bucket holds. Stored as a tag."
   type        = string
+  validation {
+    # S3 tag values allow only letters, numbers, spaces and _ . : / = + - @ (max 256).
+    # A comma or parentheses here made CreateBucket fail with InvalidTag on the first apply.
+    condition     = can(regex("^[A-Za-z0-9 _.:/=+@-]{0,256}$", var.purpose))
+    error_message = "Use only letters, numbers, spaces and _ . : / = + - @ in purpose (it becomes an S3 tag)."
+  }
 }
 
 variable "kms_key_arn" {
