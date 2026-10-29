@@ -70,7 +70,9 @@ The AI step is measured, not assumed. [`evals/`](evals/README.md) runs the real 
 
 The real model is **Claude on Amazon Bedrock**, called with an IAM role, so no API key exists anywhere. The model can only fill in one structured findings form, never take an action. Every pull request re-runs the evaluation with the offline model and fails if any score drops.
 
-*Real-model results are added after the first Bedrock run.*
+While Bedrock is blocked for this AWS account, real-model runs go through Anthropic's API with synthetic data only and the same guardrails ([D-15](docs/ai-governance/anthropic-api-testing.md)).
+
+*Real-model results are added after the first real run.*
 
 ## Human-in-the-loop design
 
@@ -98,7 +100,7 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 
 ## Deployment
 
-Infrastructure is Terraform with a cloud-agnostic module layout ([`infrastructure/`](infrastructure/README.md)). Every pull request runs `terraform validate` and a Checkov security scan, and GitHub will deploy with short-lived OIDC credentials, never stored keys. The [deploy runbook](docs/architecture/deploy-runbook.md) covers the cost (about $1.10 a month for the foundation layer) and the steps, starting with the account decision gate.
+Infrastructure is Terraform with a cloud-agnostic module layout ([`infrastructure/`](infrastructure/README.md)). Every pull request runs `terraform validate` and a Checkov security scan, and a person applies every reviewed plan by hand from CloudShell (D-14: this account's organization policy blocks GitHub OIDC, and stored AWS keys were ruled out). The foundation layer is deployed: 47 resources, with tamper and budget alerts verified. The [deploy runbook](docs/architecture/deploy-runbook.md) covers the cost (about $1.10 a month for the foundation layer) and the steps, starting with the account decision gate.
 
 ## Screenshots
 
