@@ -14,7 +14,9 @@ Security choices (SR-08, SR-10, SR-12, SR-14, SR-15; OWASP LLM01, LLM06, LLM10):
   fill in, not a capability: our code reads the form and then validates it
   with the same strict rules as before (schema.validate is still the authority).
 - Hard limits on every call: input size, output tokens, and a timeout.
-  Temperature 0 for repeatable answers.
+  No temperature setting: current Claude models reject it ("temperature is
+  deprecated for this model"). Repeatability comes from the forced form, strict
+  validation and the deterministic rules engine, and the evals measure it.
 - The model ID is pinned in configuration, never "latest", so behaviour can't
   change without a reviewed change (SR-15). It's read from the environment.
 """
@@ -116,7 +118,7 @@ class BedrockModel:
                 modelId=self.model_id,
                 system=[{"text": prompt.system}],
                 messages=[{"role": "user", "content": [{"text": prompt.user}]}],
-                inferenceConfig={"maxTokens": MAX_OUTPUT_TOKENS, "temperature": 0},
+                inferenceConfig={"maxTokens": MAX_OUTPUT_TOKENS},
                 toolConfig={
                     "tools": [{"toolSpec": {
                         "name": TOOL_NAME,
