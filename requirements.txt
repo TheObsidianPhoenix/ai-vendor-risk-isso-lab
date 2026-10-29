@@ -8,4 +8,4 @@ pypdf==6.21.2
 openpyxl==3.1.5
 # Calls Claude on Amazon Bedrock (app/ai_worker/bedrock_model.py). Imported only
 # when COUNTERPART_MODEL_PROVIDER=bedrock; the local demo doesn't need it.
-boto3==1.43.100
+boto3==1.43.118
