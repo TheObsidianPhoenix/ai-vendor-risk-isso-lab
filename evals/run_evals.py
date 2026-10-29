@@ -4,6 +4,8 @@ quality, injection resistance, and cost.
     python evals/run_evals.py                     # pretend model, offline (checks the harness)
     python evals/run_evals.py --model bedrock     # the real model; needs AWS credentials and
                                                   # COUNTERPART_BEDROCK_MODEL_ID
+    python evals/run_evals.py --model anthropic   # the real model through Anthropic's API (D-15);
+                                                  # needs ANTHROPIC_API_KEY and COUNTERPART_ANTHROPIC_MODEL_ID
     python evals/run_evals.py --strategy focused  # one pass per control area (retrieval)
 
 Writes a JSON result to evals/results/ and prints a Markdown scorecard.
@@ -28,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from app.ai_worker import BedrockModel, PretendModel, run_assessment  # noqa: E402
+from app.ai_worker import AnthropicModel, BedrockModel, PretendModel, run_assessment  # noqa: E402
 from app.ai_worker.retrieval import select  # noqa: E402
 from app.intake import scan_file  # noqa: E402
 from app.intake.result import INJECTION_FLAG_KINDS  # noqa: E402
@@ -150,7 +152,7 @@ def attack_run(name: str, model, baseline: dict) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", choices=("pretend", "bedrock"), default="pretend")
+    parser.add_argument("--model", choices=("pretend", "bedrock", "anthropic"), default="pretend")
     parser.add_argument("--out", type=Path, help="where to write the JSON result")
     parser.add_argument("--min-accuracy", type=float, default=0.0,
                         help="exit with an error if evidence-state accuracy is below this (0 to 1)")
@@ -163,7 +165,7 @@ def main() -> int:
     args = parser.parse_args()
     global STRATEGY
     STRATEGY = args.strategy
-    model = PretendModel() if args.model == "pretend" else BedrockModel()
+    model = {"pretend": PretendModel, "bedrock": BedrockModel, "anthropic": AnthropicModel}[args.model]()
 
     accuracy = [accuracy_run(v, model) for v in VENDORS]
     baseline = assess(ATTACK_TARGET, vendor_documents(ATTACK_TARGET), model)
