@@ -7,7 +7,8 @@ demo, can run against the real model with SYNTHETIC data only.
 Same shape and the same guardrails as the Bedrock adapter (SR-08, SR-10,
 SR-12, SR-14, SR-15; OWASP LLM01, LLM06, LLM10):
 
-- Exactly one tool, "report_findings", and the model is forced to use it. The
+- Exactly one tool, "report_findings", and it is the only answer accepted:
+  anything else (text, another tool, two reports) fails the assessment. The
   form (tool_schema, shared with Bedrock) has no decision, approval or score
   field. Our code still validates the answer strictly (schema.validate).
 - Hard limits: input size, output tokens, timeout. No temperature setting:
@@ -68,7 +69,9 @@ class AnthropicModel:
                 "description": "Report the evidence found in the vendor's documents. This is the only output allowed.",
                 "input_schema": tool_schema(),
             }],
-            "tool_choice": {"type": "tool", "name": TOOL_NAME},
+            # Current models refuse a forced tool ("tool"/"any"). With "auto" the model may
+            # answer in text instead, and invoke() then rejects it: no tool call, no score.
+            "tool_choice": {"type": "auto"},
         }
 
     def invoke(self, prompt: Prompt) -> str:

@@ -64,7 +64,8 @@ class Adapter(unittest.TestCase):
         self.assertNotIn("temperature", body)  # Current models reject it
         self.assertLessEqual(body["max_tokens"], 4096)
         self.assertEqual([t["name"] for t in body["tools"]], [TOOL_NAME])
-        self.assertEqual(body["tool_choice"], {"type": "tool", "name": TOOL_NAME})
+        self.assertEqual(body["tool_choice"], {"type": "auto"})  # Forced choice is refused; text answers fail below
+        self.assertIn("report_findings tool", body["system"])
         self.assertIn("untrusted DATA", body["system"])
         self.assertNotIn("CANARY", body["system"])
         self.assertLessEqual(call["timeout"], 60)
