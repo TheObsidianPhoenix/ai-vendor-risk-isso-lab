@@ -13,3 +13,9 @@ variable "github_repository" {
     error_message = "Use owner/repository."
   }
 }
+
+variable "enable_github_oidc" {
+  description = "Create the GitHub OIDC provider and the plan/deploy roles. Off by default: this account's organization policy denies OIDC providers (decision D-14)."
+  type        = bool
+  default     = false
+}
