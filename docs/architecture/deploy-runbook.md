@@ -119,6 +119,7 @@ Add **Terraform checks** to the `protect-main` ruleset's required status checks,
 | Second foundation apply | 16 added, 0 changed, 0 destroyed |
 | Alert subscription | Confirmed by email |
 | **Alert test** | Stopped and restarted CloudTrail logging; the `counterpart-dev-cloudtrail-tampering` email arrived; trail status `IsLogging: true` |
+| Budget email verification | Blocked: AWS Budgets now requires verifying each email recipient, and the organization policy denies sending the verification email. Budget alerts moved to the confirmed SNS alert topic instead (PR #30) |
 
 ## Stage 4: After the first apply
 

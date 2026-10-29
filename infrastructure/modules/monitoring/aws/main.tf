@@ -28,6 +28,20 @@ resource "aws_sns_topic_subscription" "email" {
 
 data "aws_iam_policy_document" "alerts" {
   statement {
+    sid       = "BudgetsPublishes"
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.alerts.arn]
+    principals {
+      type        = "Service"
+      identifiers = ["budgets.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+  statement {
     sid       = "EventBridgePublishes"
     actions   = ["sns:Publish"]
     resources = [aws_sns_topic.alerts.arn]
@@ -100,8 +114,13 @@ resource "aws_cloudwatch_event_target" "security" {
   arn      = aws_sns_topic.alerts.arn
 }
 
-# Cost guardrail: email at $5 and $10 of actual spend, and when the month is
+# Cost guardrail: alert at $5 and $10 of actual spend, and when the month is
 # forecast to pass the limit (Phase 1 target: under $10 a month).
+#
+# Delivered through the same SNS topic as the security alerts, not straight to
+# an email address: since 2026-09-30 AWS Budgets requires each email recipient
+# to be verified, and this account's organization policy blocks sending the
+# verification email. The topic's email subscription is already confirmed.
 resource "aws_budgets_budget" "monthly" {
   name         = "${var.name}-monthly"
   budget_type  = "COST"
@@ -112,22 +131,22 @@ resource "aws_budgets_budget" "monthly" {
   dynamic "notification" {
     for_each = var.alert_email == "" ? [] : var.budget_alert_thresholds_usd
     content {
-      comparison_operator        = "GREATER_THAN"
-      notification_type          = "ACTUAL"
-      threshold                  = notification.value
-      threshold_type             = "ABSOLUTE_VALUE"
-      subscriber_email_addresses = [var.alert_email]
+      comparison_operator       = "GREATER_THAN"
+      notification_type         = "ACTUAL"
+      threshold                 = notification.value
+      threshold_type            = "ABSOLUTE_VALUE"
+      subscriber_sns_topic_arns = [aws_sns_topic.alerts.arn]
     }
   }
 
   dynamic "notification" {
     for_each = var.alert_email == "" ? [] : [1]
     content {
-      comparison_operator        = "GREATER_THAN"
-      notification_type          = "FORECASTED"
-      threshold                  = 100
-      threshold_type             = "PERCENTAGE"
-      subscriber_email_addresses = [var.alert_email]
+      comparison_operator       = "GREATER_THAN"
+      notification_type         = "FORECASTED"
+      threshold                 = 100
+      threshold_type            = "PERCENTAGE"
+      subscriber_sns_topic_arns = [aws_sns_topic.alerts.arn]
     }
   }
 }

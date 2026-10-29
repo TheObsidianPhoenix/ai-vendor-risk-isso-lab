@@ -94,6 +94,22 @@ data "aws_iam_policy_document" "key" {
     }
   }
 
+  # AWS Budgets publishes cost alerts to the same encrypted SNS topic
+  statement {
+    sid       = "BudgetsPublishesAlerts"
+    actions   = ["kms:GenerateDataKey*", "kms:Decrypt"]
+    resources = ["*"]
+    principals {
+      type        = "Service"
+      identifiers = ["budgets.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [local.account_id]
+    }
+  }
+
   # EventBridge publishes security alerts to the encrypted SNS topic
   statement {
     sid       = "EventBridgePublishesAlerts"
