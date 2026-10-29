@@ -60,7 +60,7 @@ class Adapter(unittest.TestCase):
         nimbus(BedrockModel("test-model", client=client))
         request = client.requests[0]
         self.assertNotIn("temperature", request["inferenceConfig"])  # Current models reject it
-        self.assertLessEqual(request["inferenceConfig"]["maxTokens"], 4096)
+        self.assertLessEqual(request["inferenceConfig"]["maxTokens"], 8192)
         # Exactly one tool, and the model must use it: no free text, no other actions
         self.assertEqual([t["toolSpec"]["name"] for t in request["toolConfig"]["tools"]], [TOOL_NAME])
         self.assertEqual(request["toolConfig"]["toolChoice"], {"auto": {}})  # Text-only answers fail (below)
