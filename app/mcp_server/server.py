@@ -43,6 +43,7 @@ from typing import Callable
 from app.common import auth
 from app.common.audit import AuditLog
 from app.common.store import Store
+from app.decision.fedramp import requirement as fedramp_requirement
 from app.decision.service import vendor_status
 
 SERVER_NAME = "counterpart"
@@ -163,6 +164,7 @@ class CounterpartMCP:
                 "decided_by_a_person": status["final"],
                 "decision_by": decided.get("reviewer_name"), "decision_at": decided.get("recorded_at"),
                 **self._rating(vendor["id"]),
+                "fedramp_requirement": fedramp_requirement(vendor),
                 "note": "Ratings are advisory. Only a named reviewer in Counterpart approves or rejects a vendor."}
 
     def get_findings(self, arguments: dict) -> dict:

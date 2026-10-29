@@ -261,7 +261,8 @@ async function newVendor() {
       const f = new FormData(e.target);
       try {
         const r = await api("POST", "/api/vendors", { name: f.get("name"), service: f.get("service"),
-          data_shared: f.get("data_shared"), uses_ai_on_customer_data: f.get("uses_ai") === "yes" });
+          data_shared: f.get("data_shared"), uses_ai_on_customer_data: f.get("uses_ai") === "yes",
+          federal_data_impact: f.get("federal") });
         toast("Vendor created. Now upload its documents.");
         location.hash = "#vendor/" + r.vendor.id;
       } catch (err) { toast(err.message); }
@@ -274,6 +275,13 @@ async function newVendor() {
         radioCard("uses_ai", "yes", "Yes", "AI governance is assessed as a critical control"),
         radioCard("uses_ai", "no", "No", "AI governance isn't scored")),
       h("div", { class: "help" }, "You answer this, not the vendor's documents, so a document can't talk its way out of an AI review.")),
+    field("Will this vendor handle federal government data?",
+      h("select", { class: "input", name: "federal", required: true },
+        h("option", { value: "none" }, "No federal data"),
+        h("option", { value: "low" }, "Yes: low impact"),
+        h("option", { value: "moderate" }, "Yes: moderate impact"),
+        h("option", { value: "high" }, "Yes: high impact")),
+      "If yes, the vendor needs a FedRAMP authorization at that level or higher. A reviewer checks the FedRAMP Marketplace."),
     h("button", { class: "btn btn-primary", type: "submit" }, "Create vendor"));
   return h("div", {}, h("div", { class: "crumbs" }, h("a", { href: "#vendors" }, "Vendors"), " / New"),
     h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Add a vendor"),
@@ -299,9 +307,46 @@ async function vendor(id) {
           (v.uses_ai_on_customer_data ? " · Uses AI on our data" : ""))),
       h("div", { class: "actions" }, h("span", { class: "small muted" }, "Final status"), statusBadge(d.status.status))),
     legend(),
+    fedrampPanel(d),
     documentsPanel(d),
     a ? assessmentPanel(d) : null,
     a && a.status === "ready_for_review" ? decisionPanel(d) : null);
+}
+
+function fedrampPanel(d) {
+  const req = d.vendor.fedramp_requirement;
+  if (!req || !req.applies) return null;
+  const form = d.can.verify_fedramp ? h("form", { class: "panel-body", style: "border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end",
+    onsubmit: async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        await api("POST", `/api/vendors/${d.vendor.id}/fedramp`, { status: f.get("status"), level: f.get("level"),
+          checked_on: f.get("checked_on"), listing: f.get("listing") });
+        toast("FedRAMP status recorded.");
+      } catch (err) { toast(err.message); }
+      render();
+    } },
+    field("Marketplace status", h("select", { class: "input", name: "status", required: true },
+      h("option", { value: "certified" }, "Authorized / certified"), h("option", { value: "in_process" }, "In process"),
+      h("option", { value: "not_listed" }, "Not listed"))),
+    field("Level or class", h("select", { class: "input", name: "level" }, h("option", { value: "" }, "—"),
+      d.fedramp_levels.map((level) => h("option", { value: level }, level)))),
+    field("Date checked", h("input", { class: "input", type: "date", name: "checked_on", required: true })),
+    field("Listing (optional)", h("input", { class: "input", name: "listing", maxlength: 200, placeholder: "Marketplace package ID or link" })),
+    h("button", { class: "btn", type: "submit" }, "Record check")) : null;
+  return h("div", { class: "panel", style: "margin-bottom:16px" },
+    h("div", { class: "panel-head" }, h("h2", {}, "FedRAMP requirement"),
+      h("span", { class: "meta" }, `Federal data: ${req.federal_data_impact} impact`)),
+    h("div", { class: "panel-body" },
+      h("div", { class: "callout " + (req.met ? "callout-info" : "callout-warn") }, icon(req.met ? "check" : "alert"),
+        h("div", {}, h("strong", {}, req.met ? "Requirement met" : "Requirement not met"),
+          h("div", { class: "small", style: "margin-top:4px" }, req.reason),
+          req.checked_on ? h("div", { class: "small muted", style: "margin-top:4px" },
+            `Checked on the FedRAMP Marketplace ${req.checked_on} by ${req.recorded_by}`) : null,
+          req.met ? null : h("div", { class: "small", style: "margin-top:6px" },
+            "A plain approval is blocked until this is met. Approving with conditions is recorded as an exception.")))),
+    form);
 }
 
 function legend() {
