@@ -61,7 +61,7 @@ class Adapter(unittest.TestCase):
         call = transport.calls[0]
         body = call["body"]
         self.assertEqual(call["url"], "https://api.anthropic.com/v1/messages")
-        self.assertEqual(body["temperature"], 0)
+        self.assertNotIn("temperature", body)  # Current models reject it
         self.assertLessEqual(body["max_tokens"], 4096)
         self.assertEqual([t["name"] for t in body["tools"]], [TOOL_NAME])
         self.assertEqual(body["tool_choice"], {"type": "tool", "name": TOOL_NAME})
@@ -105,6 +105,10 @@ class Adapter(unittest.TestCase):
         result = nimbus(AnthropicModel("m", transport=FakeTransport(error=urllib.error.HTTPError(
             "u", 401, "x", {}, io.BytesIO(b'{"error": {"type": "authentication_error"}}')))))
         self.assertIn("authentication_error", json.dumps(result))
+        result = nimbus(AnthropicModel("m", transport=FakeTransport(error=urllib.error.HTTPError(
+            "u", 400, "x", {}, io.BytesIO(json.dumps({"error": {"type": "invalid_request_error",
+                                                                 "message": "temperature is deprecated"}}).encode())))))
+        self.assertIn("temperature is deprecated", json.dumps(result))
 
     def test_oversized_input_is_refused_before_any_call(self):
         transport = FakeTransport(reply(NIMBUS))

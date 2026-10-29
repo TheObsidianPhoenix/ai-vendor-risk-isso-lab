@@ -59,7 +59,7 @@ class Adapter(unittest.TestCase):
         client = FakeBedrock(converse_reply(NIMBUS))
         nimbus(BedrockModel("test-model", client=client))
         request = client.requests[0]
-        self.assertEqual(request["inferenceConfig"]["temperature"], 0)
+        self.assertNotIn("temperature", request["inferenceConfig"])  # Current models reject it
         self.assertLessEqual(request["inferenceConfig"]["maxTokens"], 4096)
         # Exactly one tool, and the model must use it: no free text, no other actions
         self.assertEqual([t["toolSpec"]["name"] for t in request["toolConfig"]["tools"]], [TOOL_NAME])

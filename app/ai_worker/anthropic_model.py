@@ -10,7 +10,8 @@ SR-12, SR-14, SR-15; OWASP LLM01, LLM06, LLM10):
 - Exactly one tool, "report_findings", and the model is forced to use it. The
   form (tool_schema, shared with Bedrock) has no decision, approval or score
   field. Our code still validates the answer strictly (schema.validate).
-- Hard limits: input size, output tokens, timeout. Temperature 0.
+- Hard limits: input size, output tokens, timeout. No temperature setting:
+  current Claude models reject it (see bedrock_model.py).
 - The model ID is pinned in configuration, never "latest".
 
 Unlike Bedrock this needs an API key, so (SR-10):
@@ -25,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -59,7 +61,6 @@ class AnthropicModel:
         return {
             "model": self.model_id,
             "max_tokens": MAX_OUTPUT_TOKENS,
-            "temperature": 0,
             "system": prompt.system,
             "messages": [{"role": "user", "content": prompt.user}],
             "tools": [{
@@ -105,9 +106,13 @@ class AnthropicModel:
 
 
 def _api_error_type(error: urllib.error.HTTPError) -> str:
-    """Anthropic's error type (for example 'authentication_error'), never the full body."""
+    """Anthropic's error type and short message, with anything key-like removed."""
     try:
-        kind = json.loads(error.read().decode("utf-8"))["error"]["type"]
+        detail = json.loads(error.read().decode("utf-8"))["error"]
+        kind, message = str(detail.get("type", "")), str(detail.get("message", ""))
     except Exception:
         return ""
-    return f", {kind}" if isinstance(kind, str) and kind.replace("_", "").isalpha() and len(kind) < 40 else ""
+    if not (kind.replace("_", "").isalpha() and len(kind) < 40):
+        return ""
+    message = re.sub(r"sk-ant-\S*", "[key removed]", message)[:200]
+    return f", {kind}: {message}" if message else f", {kind}"
