@@ -4,7 +4,7 @@
 |---|---|
 | **System** | Counterpart, Meridian Trust Labs (fictional) |
 | **Covers** | `infrastructure/bootstrap` and `infrastructure/environments/dev` (foundation layer) |
-| **Status** | Bootstrap applied 2026-10-28: the state bucket exists. GitHub OIDC is off (D-14), so the foundation is applied by hand from CloudShell |
+| **Status** | **Foundation deployed 2026-10-28** (40 resources, plus the 7-resource bootstrap). Security alerts tested end to end. GitHub OIDC is off (D-14), so changes are applied by hand from CloudShell |
 | **Builds on** | [Phase 2 Architecture](phase-2-architecture.md), sections 10 to 13 |
 
 ## What the foundation layer costs
@@ -107,12 +107,25 @@ A follow-up pull request adds the deploy workflow:
 
 Add **Terraform checks** to the `protect-main` ruleset's required status checks, so a failed scan blocks merging.
 
+## Deployment record, 2026-10-28
+
+| Step | Result |
+|---|---|
+| Terraform download | Fingerprint checked against HashiCorp's SHA256SUMS: OK |
+| Bootstrap plan and apply | 13 planned; 7 created (state bucket and its settings); the GitHub OIDC provider was **denied by the organization policy**, which led to D-14 |
+| Bootstrap re-plan after D-14 | No changes: Terraform's record matches the account |
+| Foundation plan | 40 to add, 0 to change, 0 to destroy |
+| First foundation apply | 24 created; the documents and audit buckets failed with `InvalidTag` (a comma and parentheses in a tag value). Fixed in PR #28, with a validation so it can't recur |
+| Second foundation apply | 16 added, 0 changed, 0 destroyed |
+| Alert subscription | Confirmed by email |
+| **Alert test** | Stopped and restarted CloudTrail logging; the `counterpart-dev-cloudtrail-tampering` email arrived; trail status `IsLogging: true` |
+
 ## Stage 4: After the first apply
 
-- [ ] Click the confirmation link in the **AWS Notification** email, or alerts won't arrive.
+- [x] Click the confirmation link in the **AWS Notification** email, or alerts won't arrive. *(Done 2026-10-28.)*
 - [ ] CloudTrail console: the `counterpart-dev-trail` shows **Logging: On**, with log file validation enabled.
 - [ ] **Delete the Phase 0 console trail**, so there's one trail and one bill. Capture a screenshot of the trail list first, as evidence.
-- [ ] Test an alert: in the CloudTrail console, stop and restart logging on the Terraform trail. The **cloudtrail-tampering** email should arrive within minutes. Capture it as evidence that monitoring works.
+- [x] Test an alert: in the CloudTrail console, stop and restart logging on the Terraform trail. *(Done 2026-10-28 from CloudShell; the email arrived.)* The **cloudtrail-tampering** email should arrive within minutes. Capture it as evidence that monitoring works.
 - [ ] S3 console: each `counterpart-dev-*` bucket shows **Block all public access: On** and **Default encryption: SSE-KMS**. The audit bucket shows **Object Lock: Enabled, Governance, 30 days**.
 - [ ] Commit `.terraform.lock.hcl` from the first real `terraform init` (pins provider checksums).
 
