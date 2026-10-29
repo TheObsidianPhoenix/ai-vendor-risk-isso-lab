@@ -36,8 +36,8 @@ from .schema import CITATION_FIELDS, CONFIDENCE, FINDING_FIELDS, MAX_QUESTIONS, 
 
 TOOL_NAME = "report_findings"
 MAX_PROMPT_CHARS = 120_000       # About 30,000 input tokens: caps cost per assessment (SR-14)
-MAX_OUTPUT_TOKENS = 4_096
-TIMEOUT_SECONDS = 60
+MAX_OUTPUT_TOKENS = 8_192       # A 12-area answer from the real model ran past 4,096 and was cut off
+TIMEOUT_SECONDS = 120         # Room for the longer answers above
 
 
 class ModelError(Exception):
