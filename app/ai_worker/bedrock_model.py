@@ -8,14 +8,15 @@ Security choices (SR-08, SR-10, SR-12, SR-14, SR-15; OWASP LLM01, LLM06, LLM10):
 
 - No API key. The function's AWS role is allowed to call one model and nothing
   else (Terraform, ai module). There is no secret in code, config or logs.
-- The model is given exactly one tool, "report_findings", and is required to
-  use it. It can't browse, run code, call other tools or take any action. The
+- The model is given exactly one tool, "report_findings", and an answer is
+  accepted only if it is exactly one call to it (current models refuse a
+  forced tool choice, so the check is in invoke()). It can't browse, run code, call other tools or take any action. The
   tool's form has no decision, approval or score field. The tool is a form to
   fill in, not a capability: our code reads the form and then validates it
   with the same strict rules as before (schema.validate is still the authority).
 - Hard limits on every call: input size, output tokens, and a timeout.
   No temperature setting: current Claude models reject it ("temperature is
-  deprecated for this model"). Repeatability comes from the forced form, strict
+  deprecated for this model"). Repeatability comes from the single form, strict
   validation and the deterministic rules engine, and the evals measure it.
 - The model ID is pinned in configuration, never "latest", so behaviour can't
   change without a reviewed change (SR-15). It's read from the environment.
@@ -125,7 +126,7 @@ class BedrockModel:
                         "description": "Report the evidence found in the vendor's documents. This is the only output allowed.",
                         "inputSchema": {"json": tool_schema()},
                     }}],
-                    "toolChoice": {"tool": {"name": TOOL_NAME}},
+                    "toolChoice": {"auto": {}},  # Forced choice is refused by current models; see invoke()
                 },
             )
         except Exception as error:  # Network, throttling, permissions: never a pass

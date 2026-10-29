@@ -63,7 +63,7 @@ class Adapter(unittest.TestCase):
         self.assertLessEqual(request["inferenceConfig"]["maxTokens"], 4096)
         # Exactly one tool, and the model must use it: no free text, no other actions
         self.assertEqual([t["toolSpec"]["name"] for t in request["toolConfig"]["tools"]], [TOOL_NAME])
-        self.assertEqual(request["toolConfig"]["toolChoice"], {"tool": {"name": TOOL_NAME}})
+        self.assertEqual(request["toolConfig"]["toolChoice"], {"auto": {}})  # Text-only answers fail (below)
         # Instructions in the system prompt; document text only in the user message
         self.assertIn("untrusted DATA", request["system"][0]["text"])
         self.assertNotIn("CANARY", request["system"][0]["text"])

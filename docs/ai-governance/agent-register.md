@@ -42,7 +42,7 @@ Answer the intake questions below. **The highest tier triggered wins.**
 | Success measure | Review time per vendor against a manual baseline (to be measured); accuracy against answer keys (100% on the sample set) |
 | Data residency | AWS us-east-2. The pinned Bedrock model ID must be a US inference profile (`us.` prefix), which keeps processing in US regions; a `global.` profile could process anywhere. EU customers would need an EU profile and region, plus a GDPR lawful basis, before any EU personal data is used |
 | Retention | Records expire 3 years after last activity; the model call is not stored by the app |
-| Guardrails | Intake scanner; fenced prompt; one forced tool with no decision field; strict validation; quote check; independent-evidence rule; deterministic scoring |
+| Guardrails | Intake scanner; fenced prompt; one tool with no decision field, the only answer accepted; strict validation; quote check; independent-evidence rule; deterministic scoring |
 | Tests and evals | Unit tests plus the eval harness (accuracy, quote verification, 5 injection attacks, retrieval recall), run in CI on every change |
 | Cost | About $0.03 per typical assessment and $0.22 per full CAIQ on Sonnet 5.5 ([cost card](cost-card.md)); $20 monthly account limit |
 | Known gaps | No per-user assessment cap yet (M-2); no malware scanning (D-07); not yet run on the real model |

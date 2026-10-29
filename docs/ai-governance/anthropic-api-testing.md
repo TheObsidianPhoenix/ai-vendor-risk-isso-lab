@@ -14,13 +14,13 @@ Bedrock returns *AccessDenied: not available for this account* for Anthropic mod
 | **The key lives only in an environment variable** (`ANTHROPIC_API_KEY`) in the shell doing the run. Never in the repo, a file, a chat or a log | SR-10. GitHub secret scanning with push protection is the backstop |
 | **Prepaid credit with a spend limit** ($5) on the key's workspace | Caps the cost of a leaked key or a runaway loop (SR-14) |
 | **Delete the key when testing ends**, or when Bedrock works | No standing secret |
-| **Same guardrails as Bedrock.** One forced tool with no decision field, strict validation, quote checks, input and output limits, pinned model ID | The route changes, the controls don't |
+| **Same guardrails as Bedrock.** One tool with no decision field (the only answer accepted), strict validation, quote checks, input and output limits, pinned model ID | The route changes, the controls don't |
 
 ## How the guardrails are proven
 
 `tests/test_anthropic_model.py` (10 tests, no network, fake key) checks that:
 
-- the request has exactly one tool, forced, with no temperature setting (current models reject it), with the document text outside the system prompt
+- the request has exactly one tool, with no temperature setting or forced tool choice (current models reject both), and that a text answer fails, with the document text outside the system prompt
 - an answer with a `decision` field is rejected
 - errors, timeouts, cut-off answers, wrong tools and plain-text answers all stop with **no score**
 - the key never appears in an error, a result or the model object
