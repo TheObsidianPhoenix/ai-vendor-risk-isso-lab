@@ -22,7 +22,7 @@ module "quarantine" {
 module "documents" {
   source                  = "../../shared/aws/secure-bucket"
   name_prefix             = "${var.name}-documents-"
-  purpose                 = "Vendor documents that passed intake, and extracted text"
+  purpose                 = "Vendor documents that passed intake and their extracted text"
   kms_key_arn             = var.kms_key_arn
   expire_days             = var.document_retention_days
   noncurrent_version_days = 30

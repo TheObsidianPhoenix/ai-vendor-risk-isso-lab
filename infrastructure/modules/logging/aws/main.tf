@@ -82,7 +82,7 @@ data "aws_iam_policy_document" "cloudtrail_writes" {
 module "audit" {
   source           = "../../shared/aws/secure-bucket"
   name_prefix      = "${var.name}-audit-"
-  purpose          = "Application audit events and CloudTrail logs (Object Lock)"
+  purpose          = "Application audit events and CloudTrail logs - Object Lock"
   kms_key_arn      = var.kms_key_arn
   object_lock_days = var.object_lock_days
   # Kept a little longer than the lock, then removed, so the lab doesn't grow forever
