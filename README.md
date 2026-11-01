@@ -11,12 +11,23 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 | Milestone | Status |
 |---|---|
 | 1. Foundation: secured repo, design, requirements, architecture, test data, security pipeline | ✅ Complete |
-| 2. Working app (local, with a pretend AI) | ✅ Working: sign-in by role, vendors, upload, intake scanner, AI extraction with validation, scoring, human decisions, audit log |
-| 3. AWS deployment (Terraform) | 🔄 Foundation layer written and security-scanned ([infrastructure](infrastructure/README.md)); not yet deployed |
-| 4. Security testing | ⏳ Planned |
-| 5. ISSO documentation package | ⏳ Planned |
+| 2. Working app | ✅ Working locally: sign-in by role, vendors, upload, intake scanner, AI extraction with validation, scoring, human decisions, audit log. Tested on the real model (Claude) |
+| 3. AWS deployment (Terraform) | 🔄 **Foundation layer deployed:** 47 resources, with tamper and budget alerts verified ([deploy runbook](docs/architecture/deploy-runbook.md)). App layer (Cognito sign-in with MFA, API, Lambda) is next |
+| 4. Security testing | 🔄 Evaluation suite run on the real model: 5 injection attacks, answer keys, quote checks. DAST (OWASP ZAP) follows the app layer |
+| 5. ISSO documentation package | 🔄 Decision log (D-01 to D-15), agent register, cost card, FedRAMP self-check and data retention done; control matrix and SSP next |
 
-**Completed so far:** GitHub repository secured, with every change to `main` requiring a pull request and passing security checks · design prototype · [Phase 1 Requirements & Security Brief](docs/system-security/phase-1-requirements-security-brief.md) · [Phase 2 Architecture](docs/architecture/phase-2-architecture.md) · AWS account baseline (Phase 0) · [fictional vendor documents with planted attacks](sample-data/README.md) · automated security checks (CodeQL, dependency review, test-data integrity, Dependabot) · [intake scanner](docs/system-security/intake-controls.md) · [working app with AI guardrails and human review](docs/system-security/milestone-2-app-controls.md) (95 automated tests)
+**Latest additions (October 2026):**
+
+- **Real-model results:** Claude Sonnet 5.5 matched 97% of the answer key, every quote checked out, and it resisted all 5 attacks ([results](#ai-evaluation))
+- **Finding EV-01:** the evaluation caught a weakness in the scoring rules; fix designed ([details](evals/README.md#finding-ev-01-unsupported-claims-can-lower-a-score))
+- **AWS foundation deployed** with Terraform, applied by hand after review (D-14)
+- **[Retrieval by control area](docs/system-security/retrieval-by-control-area.md):** long questionnaires are assessed one control area at a time, with the same checks on every pass
+- **[Read-only MCP server](docs/system-security/mcp-server.md):** AI assistants like Claude Desktop can look up vendor status and findings, under the same permissions as the app
+- **[Agent register and risk tiers](docs/ai-governance/agent-register.md)** and a **[cost card](docs/ai-governance/cost-card.md)** (about $0.03 per typical assessment)
+- **[FedRAMP requirement](docs/system-security/fedramp.md) (D-13):** a vendor handling federal data can't get a plain approval without a sufficient FedRAMP authorization
+- **Data retention:** records expire 3 years after the vendor's last activity
+- **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is blocked for this account
+- 163 automated tests; every change goes through a pull request with required checks
 
 ## See it
 
@@ -50,13 +61,15 @@ Serverless on AWS: Cognito, API Gateway, Lambda, S3, DynamoDB, SQS, KMS, Amazon 
 
 ## Security model
 
-**In place now (repository):** two-factor authentication; secret scanning with push protection; Dependabot alerts and updates; a ruleset that blocks deletion and history rewrites of `main` and requires a pull request plus four passing checks before any merge, with no bypass. Every third-party GitHub Action is pinned to a full commit hash and runs with a read-only token.
+**Repository:** two-factor authentication; secret scanning with push protection; Dependabot alerts and updates; a ruleset that blocks deletion and history rewrites of `main` and requires a pull request plus four passing checks before any merge, with no bypass. Terraform validation and a Checkov scan also run on every change. Every third-party GitHub Action is pinned to a full commit hash and runs with a read-only token.
 
-*Coming in Milestones 2 and 3:* application identity, data protection, logging and monitoring controls, with links to the control matrix.
+**Application:** four roles checked on the server for every request, default deny, requesters see only their own vendors, a reviewer can't decide on a vendor they requested, Critical vendors need two reviewers, and a hash-chained audit log that includes refused actions ([controls](docs/system-security/milestone-2-app-controls.md)).
+
+**AWS (deployed):** CloudTrail to an audit bucket with Object Lock, a customer-managed KMS key, private encrypted buckets that refuse non-HTTPS requests, encrypted DynamoDB tables, alerts on changes to logging, keys, buckets and tables, and a $20 monthly spend cap with budget alerts. No long-lived AWS keys exist anywhere.
 
 ## AI security controls
 
-Untrusted documents pass an [intake scanner](docs/system-security/intake-controls.md) that strips hidden text and rejects macros and active content. Document text is fenced as data in the prompt. Model output must match a strict schema, so any attempt to add a decision or score rejects the whole answer. Every quote the model cites is checked against the document, so invented evidence can only make a vendor look worse. Details and tests are in the [Milestone 2 controls](docs/system-security/milestone-2-app-controls.md). Consumption limits per user arrive with Amazon Bedrock in Phase 5.
+Untrusted documents pass an [intake scanner](docs/system-security/intake-controls.md) that strips hidden text and rejects macros and active content. Document text is fenced as data in the prompt. Model output must match a strict schema, so any attempt to add a decision or score rejects the whole answer. Every quote the model cites is checked against the document, so invented evidence can only make a vendor look worse. Details and tests are in the [Milestone 2 controls](docs/system-security/milestone-2-app-controls.md). Long documents are assessed one [control area at a time](docs/system-security/retrieval-by-control-area.md), and every pass gets the same checks. Every model call has limits on input size, output length and time, and any failure stops the assessment with no score: the system fails closed.
 
 ## AI evaluation
 
@@ -68,7 +81,7 @@ The AI step is measured, not assumed. [`evals/`](evals/README.md) runs the real 
 - whether the system still held
 - time and tokens
 
-The real model is **Claude on Amazon Bedrock**, called with an IAM role, so no API key exists anywhere. The model can only fill in one structured findings form, never take an action. Every pull request re-runs the evaluation with the offline model and fails if any score drops.
+The production design is **Claude on Amazon Bedrock**, called with an IAM role, so no API key exists anywhere. The model has one tool, a findings form, and an answer is accepted only if it's exactly one completed form: it can never take an action. Every pull request re-runs the evaluation with the offline model and fails if any score drops.
 
 While Bedrock is blocked for this AWS account, real-model runs go through Anthropic's API with synthetic data only and the same guardrails ([D-15](docs/ai-governance/anthropic-api-testing.md)).
 
@@ -83,6 +96,13 @@ While Bedrock is blocked for this AWS account, real-model runs go through Anthro
 | Median time per assessment | 18.3 s |
 
 The one attack that got through changed no control to "verified". A page of unsupported vendor claims turned blank answers into claims, which the rules score lower, so Copperline went from 80 (Critical) to 68 (High). That's a weakness in the scoring rules, not the model, recorded as finding EV-01 with a proposed fix ([evaluation details](evals/README.md#first-real-model-results)).
+
+## AI governance
+
+- **[Agent register](docs/ai-governance/agent-register.md):** every AI agent with its owner, data, access, oversight and risk tier, plus intake questions and a "not allowed" list. Counterpart's assessment worker (AG-01) and MCP server (AG-02) are both Tier 2.
+- **[Cost card](docs/ai-governance/cost-card.md):** about $0.03 per typical assessment and $16.20 a month at 50 vendors on Claude Sonnet 5.5 (estimates).
+- **Decision log:** 15 recorded decisions with the options considered and the trade-offs, in section 13 of the [architecture document](docs/architecture/phase-2-architecture.md).
+- **[Real vendor testing (D-12)](docs/risk-management/real-vendor-testing.md):** rules for testing with public CSA STAR questionnaires, kept local and private.
 
 ## Human-in-the-loop design
 
@@ -102,11 +122,13 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 | Malicious or oversized upload (macros, zip bomb, JavaScript PDF) | Rejected before any parsing or AI | ✅ [Intake scanner](docs/system-security/intake-controls.md) tested |
 | Request for another vendor's information | Unavailable to the model and to other users | ✅ One vendor per prompt; other users get "not found" (tested) |
 | Normal user tries to approve a vendor | Access denied | ✅ Server refuses and logs it (tested) |
-| AI tries to set a final decision | Technically impossible | ✅ Whole answer rejected; red team demo (tested). IAM deny added in Milestone 3 |
+| AI tries to set a final decision | Technically impossible | ✅ Whole answer rejected; red team demo (tested). IAM deny designed for the app layer |
 | Malformed AI output | Schema validation fails safely | ✅ Rejected, no score, logged (tested) |
 | Encryption claimed without evidence | Flagged as an evidence gap, not verified | ✅ Copperline scored Unverified (tested) |
 | AI invents evidence | Caught; can't lower a score | ✅ Every quote checked against the document (tested) |
 | Critical vendor approved by one person | Needs a second, different reviewer | ✅ Two-person rule (tested) |
+| Vendor handling federal data without FedRAMP | Plain approval refused; exceptions recorded | ✅ D-13 requirement (tested) |
+| Fake "assurance summary" with no auditor | Rating unchanged | ❌ **Open (EV-01):** on the real model, nothing was marked verified, but the score dropped from 80 to 68. Fix designed |
 
 ## Deployment
 
@@ -118,7 +140,10 @@ All in [`docs/screenshots/`](docs/screenshots/), taken from the running app with
 
 ## Lessons learned
 
-*Added as the project progresses.*
+- **Test the whole system, not just the model.** The real model behaved well and still produced a bad outcome through a gap in my scoring rules (EV-01). Only the evaluation suite caught it.
+- **Fail closed.** On the first real run, three different errors (two settings the new model refuses, and an answer cut off at the output limit) each produced no score rather than a wrong one. Each was fixed through a reviewed change.
+- **Guardrails belong in code, not in the request.** When the model stopped accepting a forced tool choice, the protection already lived in Counterpart's own validation, so nothing was lost.
+- **Work within the controls.** When the AWS organization policy blocked GitHub OIDC, I chose manual, reviewed deployments over stored keys or an irreversible account change (D-14).
 
 ## Repository layout
 
@@ -135,7 +160,7 @@ scripts/           Helper scripts
 
 ## Data notice
 
-All data in this project is fictional and synthetic. No real vendor, customer or personal information is used.
+All data in this repository is fictional and synthetic. No real vendor, customer or personal information is stored here. Public CSA STAR questionnaires may be tested locally under decision D-12; they're never committed, and only totals are published.
 
 ## License
 
