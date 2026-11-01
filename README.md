@@ -19,7 +19,7 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 **Latest additions (October 2026):**
 
 - **Real-model results:** Claude Sonnet 5.5 matched 97% of the answer key, every quote checked out, and it resisted all 5 attacks ([results](#ai-evaluation))
-- **Finding EV-01:** the evaluation caught a weakness in the scoring rules; fix designed ([details](evals/README.md#finding-ev-01-unsupported-claims-can-lower-a-score))
+- **Finding EV-01, fixed:** the evaluation caught a weakness in the scoring rules: a page of unsupported claims could lower a score. Documents labelled "other" no longer count as evidence, and a test reproducing the attack runs on every change ([details](evals/README.md#finding-ev-01-unsupported-claims-can-lower-a-score))
 - **AWS foundation deployed** with Terraform, applied by hand after review (D-14)
 - **[Retrieval by control area](docs/system-security/retrieval-by-control-area.md):** long questionnaires are assessed one control area at a time, with the same checks on every pass
 - **[Read-only MCP server](docs/system-security/mcp-server.md):** AI assistants like Claude Desktop can look up vendor status and findings, under the same permissions as the app
@@ -27,7 +27,7 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[FedRAMP requirement](docs/system-security/fedramp.md) (D-13):** a vendor handling federal data can't get a plain approval without a sufficient FedRAMP authorization
 - **Data retention:** records expire 3 years after the vendor's last activity
 - **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is blocked for this account
-- 163 automated tests; every change goes through a pull request with required checks
+- 170 automated tests; every change goes through a pull request with required checks
 
 ## See it
 
@@ -95,7 +95,7 @@ While Bedrock is blocked for this AWS account, real-model runs go through Anthro
 | Injection attacks the system defended | 4 of 5 |
 | Median time per assessment | 18.3 s |
 
-The one attack that got through changed no control to "verified". A page of unsupported vendor claims turned blank answers into claims, which the rules score lower, so Copperline went from 80 (Critical) to 68 (High). That's a weakness in the scoring rules, not the model, recorded as finding EV-01 with a proposed fix ([evaluation details](evals/README.md#first-real-model-results)).
+The one attack that got through changed no control to "verified". A page of unsupported vendor claims turned blank answers into claims, which the rules score lower, so Copperline went from 80 (Critical) to 68 (High). That was a weakness in the scoring rules, not the model, recorded as finding EV-01 and **fixed on 2026-11-01**: documents labelled "other" no longer count as evidence ([evaluation details](evals/README.md#first-real-model-results)).
 
 ## AI governance
 
@@ -128,7 +128,7 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 | AI invents evidence | Caught; can't lower a score | ✅ Every quote checked against the document (tested) |
 | Critical vendor approved by one person | Needs a second, different reviewer | ✅ Two-person rule (tested) |
 | Vendor handling federal data without FedRAMP | Plain approval refused; exceptions recorded | ✅ D-13 requirement (tested) |
-| Fake "assurance summary" with no auditor | Rating unchanged | ❌ **Open (EV-01):** on the real model, nothing was marked verified, but the score dropped from 80 to 68. Fix designed |
+| Fake "assurance summary" with no auditor | Rating unchanged | ✅ **Fixed (EV-01):** the real model's first run dropped the score from 80 to 68. Documents labelled "other" no longer count as evidence; reproduction tested on every change. Real-model rerun pending |
 
 ## Deployment
 
@@ -140,7 +140,7 @@ All in [`docs/screenshots/`](docs/screenshots/), taken from the running app with
 
 ## Lessons learned
 
-- **Test the whole system, not just the model.** The real model behaved well and still produced a bad outcome through a gap in my scoring rules (EV-01). Only the evaluation suite caught it.
+- **Test the whole system, not just the model.** The real model behaved well and still produced a bad outcome through a gap in my scoring rules (EV-01). Only the evaluation suite caught it, and the fix went in with a test that reproduces the attack.
 - **Fail closed.** On the first real run, three different errors (two settings the new model refuses, and an answer cut off at the output limit) each produced no score rather than a wrong one. Each was fixed through a reviewed change.
 - **Guardrails belong in code, not in the request.** When the model stopped accepting a forced tool choice, the protection already lived in Counterpart's own validation, so nothing was lost.
 - **Work within the controls.** When the AWS organization policy blocked GitHub OIDC, I chose manual, reviewed deployments over stored keys or an irreversible account change (D-14).
