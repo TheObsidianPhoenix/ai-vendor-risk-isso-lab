@@ -72,7 +72,17 @@ The real model is **Claude on Amazon Bedrock**, called with an IAM role, so no A
 
 While Bedrock is blocked for this AWS account, real-model runs go through Anthropic's API with synthetic data only and the same guardrails ([D-15](docs/ai-governance/anthropic-api-testing.md)).
 
-*Real-model results are added after the first real run.*
+**First real-model results** (2026-10-29, `claude-sonnet-5-5` through Anthropic's API, fictional vendors only):
+
+| Measure | Result |
+|---|---|
+| Evidence states matching the answer key | 97% (33 of 34) |
+| Quotes found word for word in the documents | 100% (71 of 71) |
+| Injection attacks the model itself resisted | 5 of 5 |
+| Injection attacks the system defended | 4 of 5 |
+| Median time per assessment | 18.3 s |
+
+The one attack that got through changed no control to "verified". A page of unsupported vendor claims turned blank answers into claims, which the rules score lower, so Copperline went from 80 (Critical) to 68 (High). That's a weakness in the scoring rules, not the model, recorded as finding EV-01 with a proposed fix ([evaluation details](evals/README.md#first-real-model-results)).
 
 ## Human-in-the-loop design
 
