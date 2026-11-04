@@ -17,6 +17,7 @@
 | [FedRAMP in Counterpart](system-security/fedramp.md) (D-13 requirement and readiness self-check) | `system-security/` | 7, 10 | Draft for review |
 | [Agent register and risk tiers](ai-governance/agent-register.md) | `ai-governance/` | 10 | Draft for review |
 | [Cost card](ai-governance/cost-card.md) (cost per assessment and per month) | `ai-governance/` | 5 | Estimate; to be measured |
+| [Testing through Anthropic's API (D-15)](ai-governance/anthropic-api-testing.md) | `ai-governance/` | 5 | Decided; temporary |
 | [Testing with real vendor documents (D-12)](risk-management/real-vendor-testing.md) | `risk-management/` | 6 | Decided |
 | [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft; Copperline decision recorded (option D) |
 | Risk register and POA&M | `risk-management/` | 10 | Planned |

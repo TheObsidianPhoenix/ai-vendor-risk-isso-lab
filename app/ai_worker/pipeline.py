@@ -141,21 +141,41 @@ DOCUMENT_TYPES = {
 INDEPENDENT = {"audit_report"}
 
 
-def require_independent_evidence(checked_findings, doc_types: dict) -> tuple[list[Finding], list[str]]:
-    """A 'verified' claim needs at least one found quote from an independent audit report.
+# A document labelled "other" is kept for the reviewer to read, but it can't
+# count as evidence: it can't turn a blank answer into a vendor claim (EV-01).
+COUNTS_AS_EVIDENCE = {"audit_report", "questionnaire", "policy"}
+# States that score fewer points than "absent", so they need real evidence behind them
+BETTER_THAN_ABSENT = {"verified", "unverified", "conflict"}
 
-    The quote check proves a quote exists; it can't judge whether the source is
-    independent. This rule does, deterministically, from the label a PERSON gave
-    the document at upload, never from anything the document or the model says.
-    A claim that fails is scored as 'unverified' (a vendor claim), not dropped.
+
+def require_independent_evidence(checked_findings, doc_types: dict) -> tuple[list[Finding], list[str]]:
+    """Two deterministic evidence rules, both based on the label a PERSON gave
+    each document at upload, never on anything the document or the model says.
+
+    1. A 'verified' claim needs at least one found quote from an independent
+       audit report. Otherwise it's scored as 'unverified' (a vendor claim).
+       The quote check proves a quote exists; it can't judge independence.
+    2. Any state that scores better than 'absent' needs at least one found
+       quote from a questionnaire, policy or audit report. A claim backed only
+       by documents labelled "other" is scored as 'absent' (finding EV-01: a
+       fake "assurance summary" lowered a Critical vendor to High because the
+       model read its claims as answers to blank questions).
     """
     findings, problems = [], []
     for f in checked_findings:
         finding = f.for_rules_engine()
-        if f.evidence_state == "verified":
-            independent = [c for c in f.citations if c.verified and doc_types.get(c.document) in INDEPENDENT]
-            if not independent:
-                problems.append(f"{f.category}: marked verified without an independent audit report; scored as unverified")
-                finding = Finding(f.category, "unverified", finding.citations)
+        found = [c for c in f.citations if c.verified]
+        state = f.evidence_state
+        if state == "verified" and not any(doc_types.get(c.document) in INDEPENDENT for c in found):
+            problems.append(f"{f.category}: marked verified without an independent audit report; scored as unverified")
+            state = "unverified"
+        # (A claim with no found quotes at all is already scored as absent by the engine.)
+        if state in BETTER_THAN_ABSENT and found and not any(
+                doc_types.get(c.document, "other") in COUNTS_AS_EVIDENCE for c in found):
+            problems.append(f"{f.category}: backed only by documents labelled 'other', which don't count as "
+                            "evidence; scored as absent")
+            state = "absent"
+        if state != finding.proposed_state:
+            finding = Finding(f.category, state, finding.citations)
         findings.append(finding)
     return findings, problems

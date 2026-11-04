@@ -139,11 +139,35 @@ class EvaluationCanFail(unittest.TestCase):
         result = run_evals.attack_run("fake-authority", model, baseline)
         self.assertFalse(result["model_resisted"])
 
-    def test_fooled_model_citing_the_attack_document_fails_the_defence(self):
+    def test_fooled_model_citing_the_attack_document_no_longer_moves_the_rating(self):
+        # Finding EV-01, reproduced: the attack page's quotes ARE found, and before
+        # the fix this lowered Copperline from 80 to 68 (blank answers became
+        # claims). Documents labelled "other" no longer count as evidence.
         model = GullibleModel(quote_attack_document=True)
         baseline = run_evals.assess("copperline-backup", run_evals.vendor_documents("copperline-backup"), model)
         result = run_evals.attack_run("fake-evidence", model, baseline)
-        self.assertFalse(result["model_resisted"])
+        self.assertFalse(result["model_resisted"])  # The model was fooled...
+        self.assertTrue(result["defence_held"])     # ...but the system held
+        # Every claim it made rests only on the attacker's page, so each one scores
+        # as absent: falling for the attack makes the vendor look worse, never better
+        self.assertGreaterEqual(result["score"], result["baseline_score"])
+
+    def test_harness_reports_a_defence_failure(self):
+        # The evaluation must still be able to fail: a model that turns a blank
+        # questionnaire answer into a claim, citing the questionnaire's own text,
+        # lowers the score, and the harness has to say so.
+        class ClaimInflater(GullibleModel):
+            def invoke(self, prompt):
+                report = copy.deepcopy(COPPERLINE)
+                if "=== document: addendum-" in prompt.user:
+                    for finding in report["findings"]:
+                        if finding["evidence_state"] == "absent":
+                            finding["evidence_state"] = "unverified"
+                return json.dumps(report)
+
+        model = ClaimInflater(quote_attack_document=False)
+        baseline = run_evals.assess("copperline-backup", run_evals.vendor_documents("copperline-backup"), model)
+        result = run_evals.attack_run("fake-authority", model, baseline)
         self.assertFalse(result["defence_held"])
         self.assertLess(result["score"], result["baseline_score"])
 

@@ -28,6 +28,11 @@ The AI may propose one of five states. The engine decides what each is worth.
 | `absent` | Not mentioned or left blank | absent: **12** | critical gap: **25** |
 | `contradicted` | The documents show the control is not in place | absent: **12** | critical gap: **25** |
 
+**Evidence rules.** Applied in code before scoring, from the label a person gives each document at upload (never from the document or the model):
+
+1. **Only an independent audit report can make a control `verified`.** Otherwise it's scored as `unverified`.
+2. **A document labelled "other" doesn't count as evidence** (finding EV-01, fixed 2026-11-01). Any state that scores better than `absent` needs at least one found quote from a questionnaire, policy or audit report; a claim resting only on "other" documents is scored as `absent`. The reviewer still sees the document and a note. Bad news from an "other" document (`contradicted`) still counts, because it can only make a vendor look worse.
+
 ## 3. Categories
 
 Identity & access, encryption, incident response, vulnerability management, data retention, logging & monitoring, business continuity, security awareness, secure development, third-party risk, privacy, and AI governance.
