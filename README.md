@@ -13,7 +13,7 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 | 1. Foundation: secured repo, design, requirements, architecture, test data, security pipeline | ✅ Complete |
 | 2. Working app | ✅ Working locally: sign-in by role, vendors, upload, intake scanner, AI extraction with validation, scoring, human decisions, audit log. Tested on the real model (Claude) |
 | 3. AWS deployment (Terraform) | 🔄 **Foundation layer deployed:** 47 resources, with tamper and budget alerts verified ([deploy runbook](docs/architecture/deploy-runbook.md)). App layer (Cognito sign-in with MFA, API, Lambda) is next |
-| 4. Security testing | 🔄 Evaluation suite run on the real model: 5 injection attacks, answer keys, quote checks. DAST (OWASP ZAP) follows the app layer |
+| 4. Security testing | 🔄 Evaluation suite run on the real model: 5 injection attacks, answer keys, quote checks. **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md)** run against the app locally: about 10,000 attack requests, no high or medium findings, no server errors. Repeated against AWS after the app layer |
 | 5. ISSO documentation package | 🔄 Decision log (D-01 to D-16), [risk register and POA&M](docs/risk-management/risk-register.md), agent register, cost card, FedRAMP self-check and data retention done; control matrix and SSP next |
 
 **Latest additions (October 2026):**
@@ -27,6 +27,7 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[FedRAMP requirement](docs/system-security/fedramp.md) (D-13):** a vendor handling federal data can't get a plain approval without a sufficient FedRAMP authorization
 - **Data retention:** records expire 3 years after the vendor's last activity
 - **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is unavailable: the account's model quotas are 0 and AWS declined the default because the account is new (D-16, rechecked monthly)
+- **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md):** about 10,000 attack requests signed out and as two roles; no high or medium findings, no server errors, and the one low alert verified harmless in a real browser
 - **[Risk register and POA&M](docs/risk-management/risk-register.md):** 10 open risks with a plan for each, 7 accepted risks, and EV-01 closed
 - 170 automated tests; every change goes through a pull request with required checks
 
@@ -129,6 +130,7 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 | AI invents evidence | Caught; can't lower a score | ✅ Every quote checked against the document (tested) |
 | Critical vendor approved by one person | Needs a second, different reviewer | ✅ Two-person rule (tested) |
 | Vendor handling federal data without FedRAMP | Plain approval refused; exceptions recorded | ✅ D-13 requirement (tested) |
+| Common web attacks on the running app (XSS, injection, path traversal, header fuzzing) | No exploitable finding, no crash | ✅ OWASP ZAP DAST, locally, signed out and as two roles; AWS scan after the app layer |
 | Fake "assurance summary" with no auditor | Rating unchanged | ✅ **Fixed (EV-01):** the real model's first run dropped the score from 80 to 68. Documents labelled "other" no longer count as evidence; reproduction tested on every change. Real-model rerun pending |
 
 ## Deployment

@@ -24,5 +24,8 @@ Proof that each control is in place and working. An assessor should be able to p
 | EV-009 | CM-3, CM-5 (prelim.) | Ruleset requiring a pull request and three passing checks, no bypass | `github/2026-10-15_github_ruleset-require-pr-checks.png` | 2026-10-15 |
 | EV-010 | RA-5, SA-11 (prelim.) | Pull request merged only after CodeQL, dependency review and test-data checks passed | `github/2026-10-15_github_pr3-checks-passed.png` | 2026-10-15 |
 | EV-011 | AC-6 (prelim.) | Claude GitHub App limited to this one repository | `github/2026-10-15_github-app-single-repo.png` | 2026-10-15 |
+| EV-012 | RA-5, SA-11 (prelim.) | OWASP ZAP DAST of the running app, signed out ([write-up](../docs/system-security/dast-local-zap.md)) | `dast/2026-11-03_zap_unauthenticated.html` (and `.json`) | 2026-11-03 |
+| EV-013 | RA-5, SA-11, AC-3 (prelim.) | OWASP ZAP DAST signed in as a requester | `dast/2026-11-03_zap_requester.html` (and `.json`) | 2026-11-03 |
+| EV-014 | RA-5, SA-11, AC-3 (prelim.) | OWASP ZAP DAST signed in as a reviewer | `dast/2026-11-03_zap_reviewer.html` (and `.json`) | 2026-11-03 |
 
 Control IDs marked "prelim." are preliminary and are validated in the Phase 10 control matrix.
