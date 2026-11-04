@@ -25,6 +25,7 @@
 | Security control matrix | `risk-management/` | 10 | Planned |
 | AI impact assessment, system card, EU AI Act classification | `ai-governance/` | 10 | Planned |
 | Incident response procedure, including AI incidents | `incident-response/` | 10 | Planned |
+| [Automated control checks](continuous-monitoring/control-checks.md) (evidence from AWS, mapped to SOC 2, ISO 27001, NIST) | `continuous-monitoring/` | 8 | Built; first run pending |
 | Continuous monitoring plan | `continuous-monitoring/` | 8 to 10 | Planned |
 
 Evidence that the controls work is kept separately in [`/evidence`](../evidence/README.md).

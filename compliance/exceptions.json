@@ -1,0 +1,7 @@
+{
+  "note": "Known gaps accepted in the risk register. A failed check listed here is reported as 'accepted' until its review date, then counts as a failure again. Changing this file is a risk decision: it goes through a reviewed pull request.",
+  "exceptions": {
+    "C-03": {"risk": "R-12", "decision": "D-09", "reason": "GuardDuty is not always on, to avoid a monthly charge; may be enabled briefly to capture findings", "review_by": "2027-01-31"},
+    "C-06": {"risk": "R-02", "decision": "POA&M P-02", "reason": "The AWS Projects sign-in role has AdministratorAccess; a narrower role for routine work is planned", "review_by": "2026-11-30"}
+  }
+}

@@ -27,9 +27,10 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[FedRAMP requirement](docs/system-security/fedramp.md) (D-13):** a vendor handling federal data can't get a plain approval without a sufficient FedRAMP authorization
 - **Data retention:** records expire 3 years after the vendor's last activity
 - **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is unavailable: the account's model quotas are 0 and AWS declined the default because the account is new (D-16, rechecked monthly)
+- **[Automated control checks](docs/continuous-monitoring/control-checks.md):** eleven checks pull evidence straight from AWS (CloudTrail, root and IAM users, admin access, S3, KMS, DynamoDB, alerts, budget), mapped to SOC 2, ISO 27001 and NIST 800-53, with risk-register exceptions that expire
 - **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md):** about 10,000 attack requests signed out and as two roles; no high or medium findings, no server errors, and the one low alert verified harmless in a real browser
 - **[Risk register and POA&M](docs/risk-management/risk-register.md):** 10 open risks with a plan for each, 7 accepted risks, and EV-01 closed
-- 170 automated tests; every change goes through a pull request with required checks
+- 183 automated tests; every change goes through a pull request with required checks
 
 ## See it
 
@@ -152,6 +153,7 @@ All in [`docs/screenshots/`](docs/screenshots/), taken from the running app with
 
 ```
 app/               Application code (Python)
+compliance/        Automated AWS control checks (evidence from source systems)
 tests/             Automated tests, including security tests
 sample-data/       Fictional, synthetic vendor documents only
 infrastructure/    Terraform: bootstrap, environments, modules
