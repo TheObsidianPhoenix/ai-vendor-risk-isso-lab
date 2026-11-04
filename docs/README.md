@@ -20,7 +20,7 @@
 | [Testing through Anthropic's API (D-15)](ai-governance/anthropic-api-testing.md) | `ai-governance/` | 5 | Decided; temporary |
 | [Testing with real vendor documents (D-12)](risk-management/real-vendor-testing.md) | `risk-management/` | 6 | Decided |
 | [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft; Copperline decision recorded (option D) |
-| Risk register and POA&M | `risk-management/` | 10 | Planned |
+| [Risk register and POA&M](risk-management/risk-register.md) | `risk-management/` | 10 | Draft for review |
 | Security control matrix | `risk-management/` | 10 | Planned |
 | AI impact assessment, system card, EU AI Act classification | `ai-governance/` | 10 | Planned |
 | Incident response procedure, including AI incidents | `incident-response/` | 10 | Planned |
