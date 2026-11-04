@@ -14,7 +14,8 @@ Bedrock returns *AccessDenied: not available for this account* for Anthropic mod
 | 2026-10-29 | Support case opened (Account and billing) |
 | 2026-11-01 | **Diagnosis:** the Bedrock quotas page shows **0** tokens and requests per minute for every Anthropic model, below the AWS default of 6,000,000 tokens per minute. Requested the default for Claude Sonnet 5.5, cross-region (quota L-94A31E46, us-east-2) |
 | 2026-11-01 | **Declined** automatically within 30 minutes: access "may depend on factors such as regional availability, account history, and usage patterns... Accessibility is subject to change automatically as time passes." The account is too new |
-| Next | Recheck the quotas page monthly (R-01 in the [risk register](../risk-management/risk-register.md)). When the 0 changes, rerun the evaluation on Bedrock and delete the Anthropic key |
+| 2026-11-04 | **A person at AWS Support confirmed the decline:** the account doesn't yet show enough usage, and the request can be reconsidered "after the next billing cycle." (The account can't show Bedrock usage while its quota is 0, so the decision rests on overall account history.) |
+| Next | Resubmit the quota request in early December, after the November billing cycle closes, and keep checking the quotas page monthly (R-01 in the [risk register](../risk-management/risk-register.md)). When the 0 changes, rerun the evaluation on Bedrock and delete the Anthropic key |
 
 ## The rules
 

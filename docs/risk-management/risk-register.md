@@ -44,7 +44,7 @@ Target dates are proposals for the system owner to confirm.
 
 | ID | Weakness | Risk | Milestones | Target | Status |
 |---|---|---|---|---|---|
-| P-01 | Bedrock unavailable | R-01 | Recheck the Bedrock quotas page monthly; when access opens, rerun the evaluation on Bedrock and update the README; then delete the Anthropic key | First recheck 2026-12-01 | Open |
+| P-01 | Bedrock unavailable | R-01 | AWS Support (2026-11-04): resubmit after the next billing cycle. Resubmit the quota request after the November cycle closes; recheck the quotas page monthly; when access opens, rerun the evaluation on Bedrock and update the README; then delete the Anthropic key | Resubmit 2026-12-02 | Open |
 | P-02 | Administrator role used for daily work | R-02 | Write a read-only or narrower role for routine checks; use the admin role only to apply reviewed plans; add a permission boundary to the deploy role | 2026-11-30 | Open |
 | P-03 | Temporary API key | R-03 | Rerun the real-model evaluation to confirm EV-01; then delete the key in the Anthropic console | 2026-11-30 | Open |
 | P-04 | Small evaluation set | R-05 | Confirm EV-01 on the real model; add at least one vendor and one attack; test the public CAIQs under D-12 when permitted | 2026-12-31 | Open |
