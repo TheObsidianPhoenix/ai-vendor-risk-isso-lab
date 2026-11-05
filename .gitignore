@@ -64,3 +64,6 @@ Thumbs.db
 
 # Local app data (synthetic, created by scripts/run_app.py)
 .local-data/
+
+# Local DAST working files: session cookies and scan plans (never commit)
+.dast/

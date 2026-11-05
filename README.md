@@ -13,8 +13,8 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 | 1. Foundation: secured repo, design, requirements, architecture, test data, security pipeline | ✅ Complete |
 | 2. Working app | ✅ Working locally: sign-in by role, vendors, upload, intake scanner, AI extraction with validation, scoring, human decisions, audit log. Tested on the real model (Claude) |
 | 3. AWS deployment (Terraform) | 🔄 **Foundation layer deployed:** 47 resources, with tamper and budget alerts verified ([deploy runbook](docs/architecture/deploy-runbook.md)). App layer (Cognito sign-in with MFA, API, Lambda) is next |
-| 4. Security testing | 🔄 Evaluation suite run on the real model: 5 injection attacks, answer keys, quote checks. DAST (OWASP ZAP) follows the app layer |
-| 5. ISSO documentation package | 🔄 Decision log (D-01 to D-15), agent register, cost card, FedRAMP self-check and data retention done; control matrix and SSP next |
+| 4. Security testing | 🔄 Evaluation suite run on the real model: 5 injection attacks, answer keys, quote checks. **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md)** run against the app locally: about 10,000 attack requests, no high or medium findings, no server errors. Repeated against AWS after the app layer |
+| 5. ISSO documentation package | 🔄 Decision log (D-01 to D-16), [risk register and POA&M](docs/risk-management/risk-register.md), agent register, cost card, FedRAMP self-check and data retention done; control matrix and SSP next |
 
 **Latest additions (October 2026):**
 
@@ -26,8 +26,11 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[Agent register and risk tiers](docs/ai-governance/agent-register.md)** and a **[cost card](docs/ai-governance/cost-card.md)** (about $0.03 per typical assessment)
 - **[FedRAMP requirement](docs/system-security/fedramp.md) (D-13):** a vendor handling federal data can't get a plain approval without a sufficient FedRAMP authorization
 - **Data retention:** records expire 3 years after the vendor's last activity
-- **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is blocked for this account
-- 170 automated tests; every change goes through a pull request with required checks
+- **[Testing through Anthropic's API](docs/ai-governance/anthropic-api-testing.md) (D-15)** while Amazon Bedrock is unavailable: the account's model quotas are 0 and AWS declined the default because the account is new (D-16, rechecked monthly)
+- **[Automated control checks](docs/continuous-monitoring/control-checks.md):** eleven checks pull evidence straight from AWS (CloudTrail, root and IAM users, admin access, S3, KMS, DynamoDB, alerts, budget), mapped to SOC 2, ISO 27001 and NIST 800-53, with risk-register exceptions that expire
+- **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md):** about 10,000 attack requests signed out and as two roles; no high or medium findings, no server errors, and the one low alert verified harmless in a real browser
+- **[Risk register and POA&M](docs/risk-management/risk-register.md):** 10 open risks with a plan for each, 7 accepted risks, and EV-01 closed
+- 183 automated tests; every change goes through a pull request with required checks
 
 ## See it
 
@@ -101,7 +104,7 @@ The one attack that got through changed no control to "verified". A page of unsu
 
 - **[Agent register](docs/ai-governance/agent-register.md):** every AI agent with its owner, data, access, oversight and risk tier, plus intake questions and a "not allowed" list. Counterpart's assessment worker (AG-01) and MCP server (AG-02) are both Tier 2.
 - **[Cost card](docs/ai-governance/cost-card.md):** about $0.03 per typical assessment and $16.20 a month at 50 vendors on Claude Sonnet 5.5 (estimates).
-- **Decision log:** 15 recorded decisions with the options considered and the trade-offs, in section 13 of the [architecture document](docs/architecture/phase-2-architecture.md).
+- **Decision log:** 16 recorded decisions with the options considered and the trade-offs, in section 13 of the [architecture document](docs/architecture/phase-2-architecture.md).
 - **[Real vendor testing (D-12)](docs/risk-management/real-vendor-testing.md):** rules for testing with public CSA STAR questionnaires, kept local and private.
 
 ## Human-in-the-loop design
@@ -128,6 +131,7 @@ NIST SP 800-53 Rev. 5 · NIST AI RMF and Generative AI Profile · ISO/IEC 42001 
 | AI invents evidence | Caught; can't lower a score | ✅ Every quote checked against the document (tested) |
 | Critical vendor approved by one person | Needs a second, different reviewer | ✅ Two-person rule (tested) |
 | Vendor handling federal data without FedRAMP | Plain approval refused; exceptions recorded | ✅ D-13 requirement (tested) |
+| Common web attacks on the running app (XSS, injection, path traversal, header fuzzing) | No exploitable finding, no crash | ✅ OWASP ZAP DAST, locally, signed out and as two roles; AWS scan after the app layer |
 | Fake "assurance summary" with no auditor | Rating unchanged | ✅ **Fixed (EV-01):** the real model's first run dropped the score from 80 to 68. Documents labelled "other" no longer count as evidence; reproduction tested on every change. Real-model rerun pending |
 
 ## Deployment
@@ -149,6 +153,7 @@ All in [`docs/screenshots/`](docs/screenshots/), taken from the running app with
 
 ```
 app/               Application code (Python)
+compliance/        Automated AWS control checks (evidence from source systems)
 tests/             Automated tests, including security tests
 sample-data/       Fictional, synthetic vendor documents only
 infrastructure/    Terraform: bootstrap, environments, modules

@@ -1,10 +1,21 @@
 # Testing through Anthropic's API (decision D-15)
 
-**Decided 2026-10-29, Jasmine Alexander (system owner).** While Amazon Bedrock is blocked for this AWS account (a support case is open), the evaluation suite and the local demo may call Claude through **Anthropic's own API**. This is temporary. Bedrock stays the production path.
+**Decided 2026-10-29, Jasmine Alexander (system owner).** While Amazon Bedrock is blocked for this AWS account (see [Bedrock status](#bedrock-status) and D-16), the evaluation suite and the local demo may call Claude through **Anthropic's own API**. This is temporary. Bedrock stays the production path.
 
 ## Why
 
-Bedrock returns *AccessDenied: not available for this account* for Anthropic models, even though the model agreement, entitlement and region all show available, and Amazon Nova is throttled on its first call. It's an account-level restriction that only AWS Support can lift. Real-model results shouldn't wait on that.
+Bedrock returns *AccessDenied: not available for this account* for Anthropic models, even though the model agreement, entitlement and region all show available, and Amazon Nova is throttled on its first call. It's an account-level restriction that only AWS can lift. Real-model results shouldn't wait on that.
+
+## Bedrock status
+
+| Date | What happened |
+|---|---|
+| 2026-10-28 | AccessDenied for Anthropic models; ThrottlingException ("Too many tokens per day") on the first Amazon Nova call. Use case form and agreement submitted |
+| 2026-10-29 | Support case opened (Account and billing) |
+| 2026-11-01 | **Diagnosis:** the Bedrock quotas page shows **0** tokens and requests per minute for every Anthropic model, below the AWS default of 6,000,000 tokens per minute. Requested the default for Claude Sonnet 5.5, cross-region (quota L-94A31E46, us-east-2) |
+| 2026-11-01 | **Declined** automatically within 30 minutes: access "may depend on factors such as regional availability, account history, and usage patterns... Accessibility is subject to change automatically as time passes." The account is too new |
+| 2026-11-04 | **A person at AWS Support confirmed the decline:** the account doesn't yet show enough usage, and the request can be reconsidered "after the next billing cycle." (The account can't show Bedrock usage while its quota is 0, so the decision rests on overall account history.) |
+| Next | Resubmit the quota request in early December, after the November billing cycle closes, and keep checking the quotas page monthly (R-01 in the [risk register](../risk-management/risk-register.md)). When the 0 changes, rerun the evaluation on Bedrock and delete the Anthropic key |
 
 ## The rules
 

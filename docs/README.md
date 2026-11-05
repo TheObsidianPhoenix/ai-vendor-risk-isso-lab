@@ -14,16 +14,18 @@
 | [Retrieval by control area](system-security/retrieval-by-control-area.md) (focused passes for long documents) | `system-security/` | 5 | Draft for review |
 | [MCP server](system-security/mcp-server.md) (read-only access for AI assistants) | `system-security/` | 5 | Draft for review |
 | [php2shell applicability](system-security/vulnerability-applicability.md) | `system-security/` | 9 | Done |
+| [DAST: OWASP ZAP scan of the running app (local)](system-security/dast-local-zap.md) | `system-security/` | 9 | Done locally; deployed scan pending |
 | [FedRAMP in Counterpart](system-security/fedramp.md) (D-13 requirement and readiness self-check) | `system-security/` | 7, 10 | Draft for review |
 | [Agent register and risk tiers](ai-governance/agent-register.md) | `ai-governance/` | 10 | Draft for review |
 | [Cost card](ai-governance/cost-card.md) (cost per assessment and per month) | `ai-governance/` | 5 | Estimate; to be measured |
 | [Testing through Anthropic's API (D-15)](ai-governance/anthropic-api-testing.md) | `ai-governance/` | 5 | Decided; temporary |
 | [Testing with real vendor documents (D-12)](risk-management/real-vendor-testing.md) | `risk-management/` | 6 | Decided |
 | [Vendor risk scoring methodology](risk-management/scoring-methodology.md) (rule set 1.0) | `risk-management/` | 6 | Draft; Copperline decision recorded (option D) |
-| Risk register and POA&M | `risk-management/` | 10 | Planned |
+| [Risk register and POA&M](risk-management/risk-register.md) | `risk-management/` | 10 | Draft for review |
 | Security control matrix | `risk-management/` | 10 | Planned |
 | AI impact assessment, system card, EU AI Act classification | `ai-governance/` | 10 | Planned |
 | Incident response procedure, including AI incidents | `incident-response/` | 10 | Planned |
+| [Automated control checks](continuous-monitoring/control-checks.md) (evidence from AWS, mapped to SOC 2, ISO 27001, NIST) | `continuous-monitoring/` | 8 | Built; first run pending |
 | Continuous monitoring plan | `continuous-monitoring/` | 8 to 10 | Planned |
 
 Evidence that the controls work is kept separately in [`/evidence`](../evidence/README.md).
