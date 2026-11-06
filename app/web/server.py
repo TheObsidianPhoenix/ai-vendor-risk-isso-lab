@@ -38,7 +38,7 @@ from app.rules_engine import RULE_SET_VERSION, ruleset
 
 STATIC = Path(__file__).resolve().parent / "static"
 STATIC_FILES = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
-                "/app.css": ("app.css", "text/css")}
+                "/app.css": ("app.css", "text/css"), "/phoenix.js": ("phoenix.js", "text/javascript")}
 COOKIE = "cp_session"
 CSRF_HEADER = "X-Counterpart-Request"
 ID = r"[a-z]{3}_[0-9a-f]{12}"

@@ -62,7 +62,7 @@
 html,body{height:100%}
 body{margin:0;font-family:var(--font);font-size:14px;line-height:1.5;color:var(--text);background:var(--bg);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 a{color:var(--accent)}
-:root[data-theme="dark"] a{color:var(--human)}
+:root[data-theme="dark"] .content a:not(.btn){color:var(--accent)}
 h1,h2,h3,h4{margin:0;line-height:1.25;font-weight:600}
 h1{font-size:22px;letter-spacing:-.01em}
 h2{font-size:16px}
@@ -298,7 +298,7 @@ body.hide-notes .design-note,body.hide-notes .annot{display:none}
 
 /* ---------- Added for the working app ---------- */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-.login{min-height:100%;display:grid;place-items:center;padding:24px 16px;background:var(--bg)}
+.login{min-height:100%;display:grid;place-items:center;padding:24px 16px;background:transparent}
 .login-card{width:100%;max-width:520px;padding:28px}
 .login-group{margin-bottom:12px}
 .login-user{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
@@ -312,3 +312,19 @@ body.hide-notes .design-note,body.hide-notes .annot{display:none}
 .sprite{position:absolute}
 .boot{padding:40px}
 #root{height:100%}
+
+/* ---------- Obsidian Phoenix watermark (drawn by phoenix.js) ---------- */
+.phoenix-mark{position:fixed;right:-4vw;bottom:-6vh;width:min(58vw,680px);height:auto;opacity:.1;pointer-events:none;z-index:0;animation:phoenix-rise 16s ease-in-out infinite alternate}
+:root[data-theme="dark"] .phoenix-mark{opacity:.075}
+#root{position:relative;z-index:1;height:100%}
+.phoenix-mark .wing-l{transform-box:view-box;transform-origin:194px 182px;animation:phoenix-wing-l 7s ease-in-out infinite alternate}
+.phoenix-mark .wing-r{transform-box:view-box;transform-origin:210px 182px;animation:phoenix-wing-r 7s ease-in-out infinite alternate}
+.phoenix-mark .tail{transform-box:view-box;transform-origin:200px 232px;animation:phoenix-tail 9s ease-in-out infinite alternate}
+.phoenix-mark .ember{stroke:var(--peach);stroke-width:3.2;stroke-dasharray:14 520;stroke-dashoffset:534;opacity:.9;animation:phoenix-ember 9s linear infinite}
+@keyframes phoenix-rise{from{transform:translateY(0)}to{transform:translateY(-28px)}}
+@keyframes phoenix-wing-l{from{transform:rotate(0)}to{transform:rotate(-5deg)}}
+@keyframes phoenix-wing-r{from{transform:rotate(0)}to{transform:rotate(5deg)}}
+@keyframes phoenix-tail{from{transform:rotate(-1.5deg)}to{transform:rotate(1.5deg)}}
+@keyframes phoenix-ember{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.phoenix-mark,.phoenix-mark *{animation:none!important}.phoenix-mark .ember{display:none}}
+@media (max-width:980px){.phoenix-mark{width:90vw;right:-20vw;opacity:.06}}
