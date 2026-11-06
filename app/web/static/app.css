@@ -1,12 +1,12 @@
 /* Counterpart styles. Design tokens and components come from docs/design/counterpart-design-prototype.html.
    Fonts use the system stack so the app needs nothing from outside this computer (CSP: self only). */
 :root{
-  /* Obsidian Phoenix Labs brand: purple lead, coral and peach warmth, teal for human decisions */
-  --accent:#6B3FD4;
+  /* Obsidian Phoenix Labs brand: purple #542783, coral #ED817C, peach #FFD4BD, teal #5BB9B2 (teal marks human decisions) */
+  --accent:#542783;
   --accent-ink:#ffffff;
-  --coral:#E5604E;
-  --peach:#F4A878;
-  --teal:#0F766E;
+  --coral:#ED817C;
+  --peach:#F3B291;
+  --teal:#2F8F88;
   --sidebar:color-mix(in oklab, var(--accent) 26%, #120d1c);
   --sidebar-hover:color-mix(in oklab, var(--accent) 38%, #120d1c);
   --sidebar-text:#ddd3e8;
@@ -43,8 +43,8 @@
   --serif:Georgia, "Times New Roman", serif;
 }
 :root[data-theme="dark"]{
-  --accent:#9D7BFF; --accent-ink:#1a1030;
-  --coral:#FF7F6E; --peach:#FFC9A8; --teal:#5EEAD4;
+  --accent:#A77FD8; --accent-ink:#1a0f2b;
+  --coral:#ED817C; --peach:#FFD4BD; --teal:#5BB9B2;
   --bg:#120f18; --surface:#1b1624; --surface-2:#211b2c;
   --line:#2d2539; --line-strong:#41364f;
   --text:#f3eef6; --text-2:#aca1b8; --text-3:#8a7f98;
@@ -312,3 +312,13 @@ body.hide-notes .design-note,body.hide-notes .annot{display:none}
 .sprite{position:absolute}
 .boot{padding:40px}
 #root{height:100%}
+
+/* ---------- Phoenix background (artwork: static/phoenix-*.webp) ---------- */
+.phoenix-bg{position:fixed;inset:-6%;z-index:0;pointer-events:none;background:url("/phoenix-light.webp") 62% 45%/cover no-repeat;opacity:.22;transform-origin:60% 50%;animation:phoenix-glide 12s ease-in-out infinite alternate}
+:root[data-theme="dark"] .phoenix-bg{background-image:url("/phoenix-dark.webp");opacity:.14}
+#root{position:relative;z-index:1}
+body:has(.login) .phoenix-bg{opacity:1}
+:root[data-theme="dark"] body:has(.login) .phoenix-bg{opacity:.95}
+.login-card{background:color-mix(in oklab, var(--surface) 72%, transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+@keyframes phoenix-glide{0%{transform:translate(-1.4%,1.5%) scale(1.02) rotate(-1deg);filter:brightness(1)}50%{filter:brightness(1.12)}100%{transform:translate(1.4%,-1.5%) scale(1.07) rotate(1deg);filter:brightness(1.04)}}
+@media (prefers-reduced-motion:reduce){.phoenix-bg{animation:phoenix-breathe 8s ease-in-out infinite alternate}@keyframes phoenix-breathe{from{filter:brightness(.94)}to{filter:brightness(1.1)}}}
