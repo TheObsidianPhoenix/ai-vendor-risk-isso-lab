@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **System** | Counterpart, Meridian Trust Labs (fictional) |
+| **System** | Counterpart, Obsidian Phoenix Labs (fictional) |
 | **Component** | `app/intake/` (becomes the `intake` Lambda function in Milestone 3) |
 | **Phase** | 4 |
 | **Version** | 1.0, draft for review |

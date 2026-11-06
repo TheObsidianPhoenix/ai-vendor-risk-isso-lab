@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **System** | Counterpart, Meridian Trust Labs (fictional) |
+| **System** | Counterpart, Obsidian Phoenix Labs (fictional) |
 | **Scope** | The local working app: `app/ai_worker/`, `app/decision/`, `app/common/`, `app/web/` |
 | **Covers brief phases** | 4 (minimum application), 5 (AI integration, with a pretend model), 7 (human review) |
 | **Version** | 1.0, draft for review |
