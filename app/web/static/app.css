@@ -1,37 +1,41 @@
 /* Counterpart styles. Design tokens and components come from docs/design/counterpart-design-prototype.html.
    Fonts use the system stack so the app needs nothing from outside this computer (CSP: self only). */
 :root{
-  --accent:#0F6E7A;
+  /* Obsidian Phoenix Labs brand: purple lead, coral and peach warmth, teal for human decisions */
+  --accent:#6B3FD4;
   --accent-ink:#ffffff;
-  --sidebar:color-mix(in oklab, var(--accent) 24%, #0d131c);
-  --sidebar-hover:color-mix(in oklab, var(--accent) 34%, #0d131c);
-  --sidebar-text:#c9d2dc;
-  --sidebar-muted:#8a96a3;
+  --coral:#E5604E;
+  --peach:#F4A878;
+  --teal:#0F766E;
+  --sidebar:color-mix(in oklab, var(--accent) 26%, #120d1c);
+  --sidebar-hover:color-mix(in oklab, var(--accent) 38%, #120d1c);
+  --sidebar-text:#ddd3e8;
+  --sidebar-muted:#a093b0;
 
-  --bg:#f3f5f7;
+  --bg:#faf6f3;
   --surface:#ffffff;
-  --surface-2:#f8f9fb;
-  --line:#dde2e8;
-  --line-strong:#c3cbd4;
-  --text:#18202a;
-  --text-2:#4b5866;
-  --text-3:#6e7b89;
+  --surface-2:#fcf9f7;
+  --line:#ebe1da;
+  --line-strong:#d9cbc1;
+  --text:#1e1628;
+  --text-2:#554a63;
+  --text-3:#7a6e88;
 
   /* provenance */
   --fact:#4b5866;        /* extracted from vendor document */
-  --ai:#6E4BD8;          /* AI interpretation (advisory) */
+  --ai:#4C5FD5;          /* AI interpretation (advisory): indigo, kept apart from the brand purple */
   --ai-bg:color-mix(in oklab, var(--ai) 7%, var(--surface));
   --rule:#8A5A00;        /* deterministic rules engine */
   --rule-bg:color-mix(in oklab, var(--rule) 7%, var(--surface));
-  --human:var(--accent); /* authorized human decision */
-  --human-bg:color-mix(in oklab, var(--accent) 8%, var(--surface));
+  --human:var(--teal);   /* authorized human decision */
+  --human-bg:color-mix(in oklab, var(--teal) 8%, var(--surface));
 
   /* status */
   --ok:#1A7F37; --ok-bg:#e6f4ea;
   --warn:#9A6700; --warn-bg:#fff4d6;
   --high:#C2410C; --high-bg:#ffedd5;
   --crit:#B42318; --crit-bg:#fee4e2;
-  --info:#2457C5; --info-bg:#e5edfb;
+  --info:#0369A1; --info-bg:#e0f2fe;
 
   --r-sm:4px; --r-md:8px; --r-lg:12px;
   --shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
@@ -39,16 +43,18 @@
   --serif:Georgia, "Times New Roman", serif;
 }
 :root[data-theme="dark"]{
-  --bg:#0f141a; --surface:#161d25; --surface-2:#1b232d;
-  --line:#2a3440; --line-strong:#3a4654;
-  --text:#e7ecf1; --text-2:#aab5c1; --text-3:#8492a0;
-  --fact:#aab5c1; --ai:#a48bff; --rule:#e0a93a;
+  --accent:#9D7BFF; --accent-ink:#1a1030;
+  --coral:#FF7F6E; --peach:#FFC9A8; --teal:#5EEAD4;
+  --bg:#120f18; --surface:#1b1624; --surface-2:#211b2c;
+  --line:#2d2539; --line-strong:#41364f;
+  --text:#f3eef6; --text-2:#aca1b8; --text-3:#8a7f98;
+  --fact:#aca1b8; --ai:#93a3ff; --rule:#e0a93a;
   --ok:#4ac26b; --ok-bg:#12301c; --warn:#e3b341; --warn-bg:#33290f;
   --high:#fb923c; --high-bg:#3a1f0e; --crit:#f97066; --crit-bg:#3d1613;
-  --info:#7aa2f7; --info-bg:#16233d;
-  --sidebar:color-mix(in oklab, var(--accent) 18%, #080b10);
-  --sidebar-hover:color-mix(in oklab, var(--accent) 28%, #080b10);
-  --human:color-mix(in oklab, var(--accent) 70%, #ffffff);
+  --info:#7cc4f2; --info-bg:#102a3a;
+  --sidebar:color-mix(in oklab, var(--accent) 14%, #0b0910);
+  --sidebar-hover:color-mix(in oklab, var(--accent) 24%, #0b0910);
+  --human:var(--teal); --human-bg:color-mix(in oklab, var(--teal) 10%, var(--surface));
   --shadow:none;
 }
 
@@ -68,9 +74,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 /* ---------- App shell ---------- */
 .app{display:grid;grid-template-columns:252px 1fr;height:100%;padding-top:env(safe-area-inset-top,0px)}
-.sidebar{background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;overflow-y:auto}
+.sidebar{background:radial-gradient(420px 260px at 0% 100%, color-mix(in oklab, var(--coral) 22%, transparent), transparent 70%), radial-gradient(300px 200px at 100% 100%, color-mix(in oklab, var(--peach) 12%, transparent), transparent 70%), var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;overflow-y:auto}
 .brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px}
-.brand-mark{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.brand-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg, var(--accent) 0%, var(--coral) 62%, var(--peach) 100%);display:grid;place-items:center;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 .brand-name{font-weight:700;color:#fff;font-size:15px;letter-spacing:-.01em}
 .brand-sub{font-size:11.5px;color:var(--sidebar-muted)}
 .nav-group{padding:8px 10px}
@@ -205,7 +211,7 @@ tbody tr.clickable:hover td{background:var(--surface-2)}
 .step.done .node{background:var(--ok);border-color:var(--ok);color:#fff}
 .step.done::before{background:var(--ok)}
 .step.flag .node{background:var(--crit);border-color:var(--crit);color:#fff}
-.step.wait .node{border-color:var(--accent);color:var(--accent)}
+.step.wait .node{border-color:var(--human);color:var(--human)}
 .step .t{font-size:12.5px;font-weight:600}
 .step .d{font-size:11.5px;color:var(--text-3)}
 

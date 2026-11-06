@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **System** | Counterpart, Meridian Trust Labs (fictional) |
+| **System** | Counterpart, Obsidian Phoenix Labs (fictional) |
 | **Covers** | `infrastructure/bootstrap` and `infrastructure/environments/dev` (foundation layer) |
 | **Status** | **Foundation deployed 2026-10-28** (40 resources, plus the 7-resource bootstrap). Security alerts tested end to end. GitHub OIDC is off (D-14), so changes are applied by hand from CloudShell |
 | **Builds on** | [Phase 2 Architecture](phase-2-architecture.md), sections 10 to 13 |

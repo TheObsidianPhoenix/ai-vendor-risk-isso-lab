@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **System** | Counterpart: AI-assisted vendor risk assessment |
-| **Organization** | Meridian Trust Labs (fictional) |
+| **Organization** | Obsidian Phoenix Labs (demo scenario; all data fictional) |
 | **Document owner** | Jasmine Alexander, ISSO |
 | **Version** | 1.0 |
 | **Date** | 2026-10-08 |
@@ -17,9 +17,9 @@ All companies, people, vendors, and data in this project are fictional. No real 
 
 ## 1. Fictional company and product
 
-**Meridian Trust Labs** is a fictional, 120-person B2B software company. It buys services from dozens of third-party vendors, and some of those vendors handle its confidential data. Its security team is small, and reviewing vendor security documents by hand takes days per vendor.
+In this demo scenario, **Obsidian Phoenix Labs** is a 120-person B2B software company. It buys services from dozens of third-party vendors, and some of those vendors handle its confidential data. Its security team is small, and reviewing vendor security documents by hand takes days per vendor.
 
-**Counterpart** is the internal web application Meridian builds to speed up those reviews. It reads vendor security documents, finds the evidence that matters, and proposes a risk rating. A person then makes the final decision.
+**Counterpart** is the internal web application Obsidian Phoenix Labs builds to speed up those reviews. It reads vendor security documents, finds the evidence that matters, and proposes a risk rating. A person then makes the final decision.
 
 ## 2. Business purpose
 
