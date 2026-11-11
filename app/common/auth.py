@@ -23,13 +23,22 @@ ROLES = {
 }
 
 # Fictional people for the sandbox. No passwords: in AWS, Cognito handles credentials and MFA.
+# Every user belongs to exactly one tenant (client company). The tenant travels with the
+# signed-in identity, like a claim in a Cognito token, and is never taken from a request.
 DEMO_USERS = {
-    "usr_priya": {"name": "Priya Shah", "role": "app_user", "title": "Procurement lead"},
-    "usr_omar": {"name": "Omar Haddad", "role": "app_user", "title": "Marketing operations"},
-    "usr_dana": {"name": "Dana Whitfield", "role": "reviewer", "title": "Senior security analyst"},
-    "usr_marcus": {"name": "Marcus Lee", "role": "reviewer", "title": "Security analyst"},
-    "usr_sam": {"name": "Sam Ortiz", "role": "admin", "title": "System administrator"},
-    "usr_jasmine": {"name": "Jasmine Alexander", "role": "isso", "title": "Information System Security Officer"},
+    # Harborline Federal
+    "usr_priya": {"name": "Priya Shah", "role": "app_user", "title": "Procurement lead", "tenant_id": "ten_harborline"},
+    "usr_omar": {"name": "Omar Haddad", "role": "app_user", "title": "Marketing operations", "tenant_id": "ten_harborline"},
+    "usr_dana": {"name": "Dana Whitfield", "role": "reviewer", "title": "Senior security analyst", "tenant_id": "ten_harborline"},
+    "usr_marcus": {"name": "Marcus Lee", "role": "reviewer", "title": "Security analyst", "tenant_id": "ten_harborline"},
+    "usr_sam": {"name": "Sam Ortiz", "role": "admin", "title": "System administrator", "tenant_id": "ten_harborline"},
+    "usr_jasmine": {"name": "Jasmine Alexander", "role": "isso", "title": "Information System Security Officer", "tenant_id": "ten_harborline"},
+    # Larkspur Robotics
+    "usr_lena": {"name": "Lena Brandt", "role": "app_user", "title": "Operations manager", "tenant_id": "ten_larkspur"},
+    "usr_theo": {"name": "Theo Nakamura", "role": "reviewer", "title": "Security lead", "tenant_id": "ten_larkspur"},
+    "usr_ines": {"name": "Ines Carvalho", "role": "reviewer", "title": "GRC analyst", "tenant_id": "ten_larkspur"},
+    "usr_ravi": {"name": "Ravi Menon", "role": "admin", "title": "IT administrator", "tenant_id": "ten_larkspur"},
+    "usr_noor": {"name": "Noor Aziz", "role": "isso", "title": "Compliance officer", "tenant_id": "ten_larkspur"},
 }
 
 SESSION_SECONDS = 8 * 60 * 60
@@ -54,6 +63,7 @@ class User:
     name: str
     role: str
     title: str
+    tenant_id: str
 
     @property
     def role_name(self) -> str:
@@ -64,7 +74,8 @@ class User:
 
     def public(self) -> dict:
         return {"id": self.id, "name": self.name, "role": self.role, "role_name": self.role_name,
-                "title": self.title, "permissions": sorted(PERMISSIONS.get(self.role, set()))}
+                "title": self.title, "tenant_id": self.tenant_id,
+                "permissions": sorted(PERMISSIONS.get(self.role, set()))}
 
 
 @dataclass(frozen=True)
@@ -79,6 +90,11 @@ class Session:
 def get_user(user_id: str) -> User | None:
     info = DEMO_USERS.get(user_id)
     return User(user_id, **info) if info else None
+
+
+def users_in(tenant_id: str) -> list[User]:
+    """The users of one tenant. A tenant's admin never sees another tenant's people."""
+    return [User(uid, **info) for uid, info in DEMO_USERS.items() if info["tenant_id"] == tenant_id]
 
 
 class Sessions:

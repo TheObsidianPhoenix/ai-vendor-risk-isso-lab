@@ -30,7 +30,8 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[Automated control checks](docs/continuous-monitoring/control-checks.md):** eleven checks pull evidence straight from AWS (CloudTrail, root and IAM users, admin access, S3, KMS, DynamoDB, alerts, budget), mapped to SOC 2, ISO 27001 and NIST 800-53, with risk-register exceptions that expire
 - **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md):** about 10,000 attack requests signed out and as two roles; no high or medium findings, no server errors, and the one low alert verified harmless in a real browser
 - **[Risk register and POA&M](docs/risk-management/risk-register.md):** 10 open risks with a plan for each, 7 accepted risks, and EV-01 closed
-- 183 automated tests; every change goes through a pull request with required checks
+- **[Multi-tenant, with tenant isolation](docs/system-security/tenant-isolation.md):** two fictional client companies share one running product, and no role in one company can read, change or even detect the other's records. Fourteen tests attack the boundary; breaking it on purpose makes 23 checks fail
+- 197 automated tests; every change goes through a pull request with required checks
 
 ## See it
 

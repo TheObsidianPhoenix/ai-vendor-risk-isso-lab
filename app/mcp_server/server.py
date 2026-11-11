@@ -40,7 +40,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-from app.common import auth
+from app.common import auth, tenants
 from app.common.audit import AuditLog
 from app.common.store import Store
 from app.decision.fedramp import requirement as fedramp_requirement
@@ -75,9 +75,15 @@ class ToolError(Exception):
 
 class CounterpartMCP:
     def __init__(self, data_dir: Path, user_id: str | None):
-        self.store = Store(Path(data_dir))
-        self.audit = AuditLog(Path(data_dir) / "audit.jsonl")
         self.user = auth.get_user(user_id or "")
+        if self.user is not None:
+            # Only this user's tenant space is ever opened; no other tenant's data is reachable from here
+            space = tenants.space_path(Path(data_dir), self.user.tenant_id)
+            self.store = Store(space)
+            self.audit = AuditLog(space / "audit.jsonl")
+        else:
+            self.store = None    # Unknown user: no tenant, so no data. Every call is refused and logged.
+            self.audit = AuditLog(Path(data_dir) / "platform-audit.jsonl")
         self.tools: dict[str, tuple[str, dict, Callable[[dict], dict]]] = {
             "list_vendors": ("List the vendors you can see, with each one's current status and rating.",
                              NO_ARGS, self.list_vendors),

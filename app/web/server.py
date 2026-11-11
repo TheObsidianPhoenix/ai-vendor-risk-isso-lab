@@ -28,7 +28,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from app.ai_worker import DOCUMENT_TYPES, MODES, make_model, provider, run_assessment
-from app.common import auth
+from app.common import auth, tenants
 from app.common.audit import AuditLog
 from app.common.store import Store, now
 from app.decision import DECISIONS, DecisionRefused, fedramp, record_decision, vendor_status
@@ -57,21 +57,29 @@ SECURITY_HEADERS = {
 }
 
 
+# The handlers a tenant app answers. Anything else is refused, whatever a caller asks for.
+TENANT_ROUTES = frozenset({"sign_out", "me", "overview", "list_vendors", "create_vendor", "get_vendor", "upload",
+                           "record_fedramp", "assess", "decide", "audit_log", "users", "get_settings",
+                           "change_settings", "rules"})
+
+
 class ApiError(Exception):
     def __init__(self, status: int, message: str):
         super().__init__(message)
         self.status, self.message = status, message
 
 
-class CounterpartApp:
-    """Everything the handlers share. One instance per running server."""
+class TenantApp:
+    """One client company's Counterpart. It holds only that tenant's store, audit trail and
+    settings, so nothing in here can reach another tenant's data: there is no reference to it.
+    In AWS this is the Lambda running with credentials scoped to one tenant's key prefix."""
 
-    def __init__(self, data_dir: Path, clock=None):
-        self.store = Store(Path(data_dir))
-        self.audit = AuditLog(Path(data_dir) / "audit.jsonl")
-        self.sessions = auth.Sessions(clock) if clock else auth.Sessions()
+    def __init__(self, tenant: tenants.Tenant, space: Path, sessions: auth.Sessions):
+        self.tenant = tenant
+        self.store = Store(space)
+        self.audit = AuditLog(space / "audit.jsonl")
+        self.sessions = sessions
         self.settings = {"model_mode": "normal"}
-        self.quiet = False
         self.purge_expired()
 
     def purge_expired(self) -> dict:
@@ -81,27 +89,16 @@ class CounterpartApp:
             self.audit.record(actor="system", role="system", action="retention.purge", details=removed)
         return removed
 
-    # ----- routing ---------------------------------------------------------------
-    def routes(self):
-        return [
-            ("GET", r"/api/demo-users", self.demo_users, False),
-            ("POST", r"/api/session", self.sign_in, False),
-            ("DELETE", r"/api/session", self.sign_out, True),
-            ("GET", r"/api/me", self.me, True),
-            ("GET", r"/api/overview", self.overview, True),
-            ("GET", r"/api/vendors", self.list_vendors, True),
-            ("POST", r"/api/vendors", self.create_vendor, True),
-            ("GET", rf"/api/vendors/(?P<vendor_id>{ID})", self.get_vendor, True),
-            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/documents", self.upload, True),
-            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/fedramp", self.record_fedramp, True),
-            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/assessments", self.assess, True),
-            ("POST", rf"/api/assessments/(?P<assessment_id>{ID})/decisions", self.decide, True),
-            ("GET", r"/api/audit", self.audit_log, True),
-            ("GET", r"/api/users", self.users, True),
-            ("GET", r"/api/settings", self.get_settings, True),
-            ("POST", r"/api/settings", self.change_settings, True),
-            ("GET", r"/api/rules", self.rules, True),
-        ]
+    def handle(self, name: str, session, body: dict, **params) -> dict:
+        """The only way in. A second, independent check: even if routing above ever went wrong,
+        a session from another company is refused here before any handler runs."""
+        if session is None or session.user.tenant_id != self.tenant.id:
+            self.audit.record(actor="unknown", role="none", action="tenant.boundary", outcome="denied",
+                              details={"reason": "session belongs to a different company"})
+            raise ApiError(403, "Your account isn't linked to this company")
+        if name.startswith("_") or name not in TENANT_ROUTES:
+            raise ApiError(404, "Not found")
+        return getattr(self, name)(session, body, **params)
 
     # ----- helpers ---------------------------------------------------------------
     def _visible_vendor(self, session, vendor_id: str) -> dict:
@@ -133,28 +130,13 @@ class CounterpartApp:
                     document_count=len(self.store.list_documents(vendor["id"])))
 
     # ----- handlers --------------------------------------------------------------
-    def demo_users(self, session, body, **_):
-        return {"users": [{"id": uid, **info, "role_name": auth.ROLES[info["role"]]} for uid, info in auth.DEMO_USERS.items()],
-                "note": "Local sandbox sign-in. Replaced by Amazon Cognito with MFA in Milestone 3."}
-
-    def sign_in(self, session, body, **_):
-        user_id = str(body.get("user_id", ""))
-        try:
-            token, new = self.sessions.sign_in(user_id)
-        except auth.PermissionDenied:
-            self.audit.record(actor="unknown", role="none", action="auth.sign_in", outcome="denied",
-                              details={"reason": "unknown user"})
-            raise ApiError(401, "Sign-in failed") from None
-        self._log(new, "auth.sign_in")
-        return {"user": new.user.public(), "_set_cookie": token}
-
     def sign_out(self, session, body, token=None, **_):
         self.sessions.sign_out(token)
         self._log(session, "auth.sign_out")
         return {"_clear_cookie": True}
 
     def me(self, session, body, **_):
-        return {"user": session.user.public(), "signed_in_at": session.signed_in_at,
+        return {"user": session.user.public(), "tenant": self.tenant.public(), "signed_in_at": session.signed_in_at,
                 "fresh_for_seconds": max(0, int(auth.FRESH_SIGN_IN_SECONDS - (self.sessions.clock() - session.signed_in_at))),
                 "model_mode": self.settings["model_mode"], "model_mode_label": MODES[self.settings["model_mode"]],
                 "model_provider": provider()}
@@ -311,7 +293,7 @@ class CounterpartApp:
 
     def users(self, session, body, **_):
         self._require(session, "users.view", "users.view")
-        return {"users": [auth.get_user(uid).public() for uid in auth.DEMO_USERS], "roles": auth.ROLES}
+        return {"users": [u.public() for u in auth.users_in(self.tenant.id)], "roles": auth.ROLES}
 
     def get_settings(self, session, body, **_):
         return {"model_mode": self.settings["model_mode"], "modes": MODES, "model_provider": provider(),
@@ -342,6 +324,80 @@ def _field(body: dict, name: str, max_len: int) -> str:
     return value
 
 
+
+class CounterpartApp:
+    """The platform: sign-in, and routing each request to the signed-in user's tenant.
+
+    The tenant is taken from the session (the signed-in identity) and from nowhere else.
+    Tenant spaces are separate folders under <data>/tenants/, one per client company."""
+
+    PLATFORM_HANDLERS = {"demo_users", "sign_in"}
+
+    def __init__(self, data_dir: Path, clock=None):
+        self.data_dir = Path(data_dir)
+        self.sessions = auth.Sessions(clock) if clock else auth.Sessions()
+        self.audit = AuditLog(self.data_dir / "platform-audit.jsonl")   # Sign-in failures only; no tenant data
+        self.quiet = False
+        self._tenants = {tid: TenantApp(tenant, tenants.space_path(self.data_dir, tid), self.sessions)
+                         for tid, tenant in tenants.TENANTS.items()}
+
+    def tenant(self, tenant_id: str) -> TenantApp:
+        app = self._tenants.get(tenant_id)
+        if app is None:
+            raise ApiError(403, "Your account isn't linked to a company")
+        return app
+
+    def routes(self):
+        return [
+            ("GET", r"/api/demo-users", "demo_users", False),
+            ("POST", r"/api/session", "sign_in", False),
+            ("DELETE", r"/api/session", "sign_out", True),
+            ("GET", r"/api/me", "me", True),
+            ("GET", r"/api/overview", "overview", True),
+            ("GET", r"/api/vendors", "list_vendors", True),
+            ("POST", r"/api/vendors", "create_vendor", True),
+            ("GET", rf"/api/vendors/(?P<vendor_id>{ID})", "get_vendor", True),
+            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/documents", "upload", True),
+            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/fedramp", "record_fedramp", True),
+            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/assessments", "assess", True),
+            ("POST", rf"/api/assessments/(?P<assessment_id>{ID})/decisions", "decide", True),
+            ("GET", r"/api/audit", "audit_log", True),
+            ("GET", r"/api/users", "users", True),
+            ("GET", r"/api/settings", "get_settings", True),
+            ("POST", r"/api/settings", "change_settings", True),
+            ("GET", r"/api/rules", "rules", True),
+        ]
+
+    def call(self, name: str, session, body: dict, **params) -> dict:
+        if name in self.PLATFORM_HANDLERS:
+            return getattr(self, name)(session, body, **params)
+        # Every other route needs a session, and the tenant comes from that session only
+        return self.tenant(session.user.tenant_id).handle(name, session, body, **params)
+
+    def demo_users(self, session, body, **_):
+        return {"companies": [
+                    {**tenant.public(),
+                     "users": [{"id": u.id, "name": u.name, "role_name": u.role_name, "title": u.title}
+                               for u in auth.users_in(tenant.id)]}
+                    for tenant in tenants.TENANTS.values()],
+                "note": "No passwords here. In AWS, Amazon Cognito handles sign-in and MFA."}
+
+    def sign_in(self, session, body, **_):
+        user_id = str(body.get("user_id", ""))
+        try:
+            token, new = self.sessions.sign_in(user_id)
+        except auth.PermissionDenied:
+            self.audit.record(actor="unknown", role="none", action="auth.sign_in", outcome="denied",
+                              details={"reason": "unknown user"})
+            raise ApiError(401, "Sign-in failed") from None
+        home = self.tenant(new.user.tenant_id)
+        home.audit.record(actor=new.user.id, role=new.user.role, action="auth.sign_in", outcome="success", details={})
+        return {"user": new.user.public(), "tenant": home.tenant.public(), "_set_cookie": token}
+
+    def purge_expired(self) -> dict:
+        return {tid: app.purge_expired() for tid, app in self._tenants.items()}
+
+
 class Handler(BaseHTTPRequestHandler):
     app: CounterpartApp  # Set by make_server
     server_version = "Counterpart"
@@ -366,13 +422,13 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET" and path in STATIC_FILES:
                 name, kind = STATIC_FILES[path]
                 return self._send(200, (STATIC / name).read_bytes(), f"{kind}; charset=utf-8")
-            for route_method, pattern, handler, needs_session in self.app.routes():
+            for route_method, pattern, name, needs_session in self.app.routes():
                 match = re.fullmatch(pattern, path)
                 if not match:
                     continue
                 if route_method != method:
                     continue
-                return self._call(method, handler, needs_session, match.groupdict())
+                return self._call(method, name, needs_session, match.groupdict())
             if path.startswith("/api/"):
                 raise ApiError(404, "Not found")
             raise ApiError(404, "Not found")
@@ -382,7 +438,7 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._json(500, {"error": "Something went wrong. The error was logged."})
 
-    def _call(self, method, handler, needs_session, params):
+    def _call(self, method, name, needs_session, params):
         if method != "GET" and self.headers.get(CSRF_HEADER) != "1":
             raise ApiError(403, "Missing request header")
         token = self._cookie()
@@ -392,7 +448,7 @@ class Handler(BaseHTTPRequestHandler):
 
         length = int(self.headers.get("Content-Length") or 0)
         raw, body = b"", {}
-        if handler == self.app.upload:
+        if name == "upload":
             if length > DEFAULT_LIMITS.max_file_bytes + 1:
                 raise ApiError(413, f"Files must be at most {DEFAULT_LIMITS.max_file_bytes // (1024 * 1024)} MB")
             raw = self.rfile.read(length)
@@ -409,7 +465,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError(400, "Invalid JSON") from None
             if not isinstance(body, dict):
                 raise ApiError(400, "Invalid JSON")
-        result = handler(session, body, raw=raw, token=token, **params)
+        result = self.app.call(name, session, body, raw=raw, token=token, **params)
         cookie = None
         if "_set_cookie" in result:
             cookie = f"{COOKIE}={result.pop('_set_cookie')}; HttpOnly; SameSite=Strict; Path=/"

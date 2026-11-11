@@ -21,6 +21,7 @@ import unittest
 from pathlib import Path
 
 from app.ai_worker import PretendModel, run_assessment
+from app.common import tenants
 from app.common.audit import AuditLog
 from app.common.auth import Session, get_user
 from app.common.store import Store
@@ -52,7 +53,8 @@ class MCPServer(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        store, audit = Store(self.root), AuditLog(self.root / "audit.jsonl")
+        space = tenants.space_path(self.root, "ten_harborline")   # Priya and Omar's company
+        store, audit = Store(space), AuditLog(space / "audit.jsonl")
         self.vendors = {}
         for sample, owner in (("copperline-backup", "usr_priya"), ("kestrel-payroll-cloud", "usr_omar")):
             info = expected(sample)
