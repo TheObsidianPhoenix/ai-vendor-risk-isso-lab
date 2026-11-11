@@ -132,6 +132,8 @@ function shell(route, content) {
       h("div", { class: "brand" },
         h("div", { class: "brand-mark" }, icon("shield", 18)),
         h("div", {}, h("div", { class: "brand-name" }, "Counterpart"), h("div", { class: "brand-sub" }, "by Obsidian Phoenix Labs"))),
+      h("div", { class: "tenant-chip", title: state.me.tenant.summary },
+        h("span", { class: "tenant-label" }, "Company"), h("span", { class: "tenant-name" }, state.me.tenant.name)),
       h("nav", { class: "nav" },
         h("div", { class: "nav-group" }, h("div", { class: "nav-label" }, "Vendor risk"),
           link("overview", "grid", "Overview"),
@@ -169,22 +171,24 @@ async function signOut() {
 // ---------- sign in ----------
 async function loginScreen() {
   const data = await api("GET", "/api/demo-users");
-  const byRole = {};
-  for (const u of data.users) (byRole[u.role_name] = byRole[u.role_name] || []).push(u);
+  const person = (u) => h("button", { class: "login-user", onclick: () => signIn(u.id) },
+    h("span", { class: "avatar" }, u.name.split(" ").map((p) => p[0]).join("")),
+    h("span", {}, h("span", { class: "strong" }, u.name), h("br"),
+      h("span", { class: "small muted" }, `${u.role_name} · ${u.title}`)));
   return h("div", { class: "login" },
-    h("div", { class: "login-card panel" },
+    h("div", { class: "login-card login-wide panel" },
       h("div", { class: "brand", style: "padding:0 0 12px" },
         h("div", { class: "brand-mark" }, icon("shield", 18)),
         h("div", {}, h("div", { class: "brand-name", style: "color:var(--text)" }, "Counterpart"),
           h("div", { class: "brand-sub" }, "AI-assisted vendor risk · Obsidian Phoenix Labs"))),
       h("h1", {}, "Sign in"),
       h("p", { class: "muted", style: "margin:6px 0 16px" },
-        "Choose a fictional user. Each role sees and can do different things, and the server enforces it."),
-      Object.entries(byRole).map(([role, users]) => h("div", { class: "login-group" },
-        h("div", { class: "nav-label", style: "color:var(--text-3);padding-left:0" }, role),
-        users.map((u) => h("button", { class: "login-user", onclick: () => signIn(u.id) },
-          h("span", { class: "avatar" }, u.name.split(" ").map((p) => p[0]).join("")),
-          h("span", {}, h("span", { class: "strong" }, u.name), h("br"), h("span", { class: "small muted" }, u.title)))))),
+        "Two fictional client companies share this product. Choose a person: each one sees only their own company, and each role can do different things. The server enforces both."),
+      h("div", { class: "login-companies" },
+        data.companies.map((c) => h("section", { class: "login-company" },
+          h("h2", {}, c.name),
+          h("p", { class: "small muted" }, c.summary),
+          c.users.map(person)))),
       h("p", { class: "annot" }, h("b", {}, "Sandbox sign-in. "), data.note)));
 }
 async function signIn(userId) {

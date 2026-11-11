@@ -134,14 +134,14 @@ class WebApp(unittest.TestCase):
         status, body, _ = self.priya.call("POST", f"/api/vendors/{self.vendor_id}/documents", raw=b"MZ program", filename="policy.pdf")
         self.assertEqual(status, 200)
         self.assertEqual(body["document"]["status"], "rejected")
-        stored = Path(self.tmp.name, "files", self.vendor_id)
+        stored = Path(self.tmp.name, "tenants", "ten_harborline", "files", self.vendor_id)
         self.assertNotIn(body["document"]["sha256"], [p.name for p in stored.iterdir()])
 
     def test_audit_log_is_intact_and_holds_no_document_text(self):
         jasmine = Client(self.base).sign_in("usr_jasmine")
         _, body, _ = jasmine.call("GET", "/api/audit")
         self.assertTrue(body["chain"]["intact"])
-        log = Path(self.tmp.name, "audit.jsonl").read_text()
+        log = Path(self.tmp.name, "tenants", "ten_harborline", "audit.jsonl").read_text()
         for secret in ("Ignore all previous instructions", "CANARY-NIMBUS", "SYSTEM NOTE", jasmine.cookie.split("=")[1]):
             self.assertNotIn(secret, log)
 
