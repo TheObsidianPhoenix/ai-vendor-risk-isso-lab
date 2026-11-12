@@ -45,7 +45,7 @@ def new_id(prefix: str) -> str:
 
 
 class Store:
-    TABLES = ("vendors", "documents", "assessments")
+    TABLES = ("vendors", "documents", "assessments", "tasks")
 
     def __init__(self, root: Path, retention_days: int = RETENTION_DAYS, clock=time.time):
         self.root = Path(root)
@@ -58,6 +58,7 @@ class Store:
             if not path.exists():
                 self._write(path, {})
         (self.root / "decisions.jsonl").touch(exist_ok=True)
+        (self.root / "comments.jsonl").touch(exist_ok=True)
 
     # ----- generic table access -------------------------------------------------
     def _path(self, table: str) -> Path:
@@ -141,6 +142,50 @@ class Store:
         items = self.list_assessments(vendor_id)
         return items[-1] if items else None
 
+    # ----- review tasks (Milestone 2) ---------------------------------------------
+    def create_tasks(self, vendor_id: str, assessment_id: str, tasks: list[dict]) -> list[dict]:
+        """The checklist for one assessment. Only ever called once per assessment
+        (app.web.server.assess, right after scoring), so this never overwrites an
+        in-progress checklist -- a fresh assessment gets a fresh id and a fresh slate."""
+        self._touch_vendor(vendor_id)
+        return [self._put("tasks", dict(t, id=new_id("tsk"), created_at=now(), expires_at=self._expiry()))
+                for t in tasks]
+
+    def list_tasks(self, vendor_id: str | None = None, assessment_id: str | None = None) -> list[dict]:
+        items = self._all("tasks").values()
+        if vendor_id is not None:
+            items = (t for t in items if t["vendor_id"] == vendor_id)
+        if assessment_id is not None:
+            items = (t for t in items if t["assessment_id"] == assessment_id)
+        return sorted(items, key=lambda t: t["created_at"])
+
+    def get_task(self, task_id: str) -> dict | None:
+        return self._all("tasks").get(task_id)
+
+    def complete_task(self, task_id: str, by: str, by_name: str, note: str) -> dict:
+        with self._lock:
+            task = self.get_task(task_id)
+            if task is None:
+                raise KeyError(task_id)
+            self._touch_vendor(task["vendor_id"])
+            return self._put("tasks", dict(task, status="done", completed_by=by, completed_by_name=by_name,
+                                           note=note, completed_at=now()))
+
+    # ----- comments: append-only ---------------------------------------------------
+    def add_comment(self, vendor_id: str, author: str, author_name: str, body: str) -> dict:
+        item = {"id": new_id("cmt"), "vendor_id": vendor_id, "author": author, "author_name": author_name,
+                "body": body, "posted_at": now(), "expires_at": self._expiry()}
+        with self._lock, (self.root / "comments.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(item, sort_keys=True) + "\n")
+        self._touch_vendor(vendor_id)
+        return item
+
+    def list_comments(self, vendor_id: str | None = None) -> list[dict]:
+        with self._lock:
+            lines = (self.root / "comments.jsonl").read_text(encoding="utf-8").splitlines()
+        items = [json.loads(line) for line in lines if line.strip()]
+        return [c for c in items if vendor_id is None or c["vendor_id"] == vendor_id]
+
     # ----- decisions: append-only ------------------------------------------------
     def append_decision(self, record: dict) -> dict:
         item = dict(record, id=new_id("dec"), recorded_at=now(), expires_at=self._expiry())
@@ -160,7 +205,8 @@ class Store:
         """Delete every record past its retention date, and everything belonging
         to an expired vendor. Returns counts only (for the audit log)."""
         cutoff = int(self.clock())
-        removed = {"vendors": 0, "documents": 0, "assessments": 0, "decisions": 0, "files": 0}
+        removed = {"vendors": 0, "documents": 0, "assessments": 0, "tasks": 0, "comments": 0,
+                  "decisions": 0, "files": 0}
         with self._lock:
             vendors = self._all("vendors")
             expired_vendors = {vid for vid, v in vendors.items() if v.get("expires_at", 0) <= cutoff}
@@ -168,7 +214,7 @@ class Store:
             def gone(item):
                 return item.get("expires_at", 0) <= cutoff or item.get("vendor_id") in expired_vendors
 
-            for table in ("documents", "assessments"):
+            for table in ("documents", "assessments", "tasks"):
                 data = self._all(table)
                 keep = {key: item for key, item in data.items() if not gone(item)}
                 removed[table] = len(data) - len(keep)
@@ -188,6 +234,16 @@ class Store:
                 path = self.root / "decisions.jsonl"
                 tmp = path.with_suffix(".tmp")
                 tmp.write_text("".join(json.dumps(d, sort_keys=True) + "\n" for d in kept), encoding="utf-8")
+                os.replace(tmp, path)
+
+            comments = self.list_comments()
+            kept_comments = [c for c in comments if not gone(c)]
+            removed["comments"] = len(comments) - len(kept_comments)
+            if removed["comments"]:
+                path = self.root / "comments.jsonl"
+                tmp = path.with_suffix(".tmp")
+                tmp.write_text("".join(json.dumps(c, sort_keys=True) + "\n" for c in kept_comments),
+                               encoding="utf-8")
                 os.replace(tmp, path)
 
             removed["vendors"] = len(expired_vendors)

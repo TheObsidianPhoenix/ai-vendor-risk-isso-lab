@@ -35,13 +35,18 @@ class Retention(unittest.TestCase):
         self.file = Path(self.tmp.name, "files", self.vendor["id"], "abc123")
         self.store.add_assessment({"vendor_id": self.vendor["id"], "status": "ready_for_review"})
         self.store.append_decision({"vendor_id": self.vendor["id"], "assessment_id": "asm_x", "stage": "final"})
+        self.task = self.store.create_tasks(self.vendor["id"], "asm_x",
+                                            [{"vendor_id": self.vendor["id"], "assessment_id": "asm_x",
+                                              "kind": "security", "label": "Security review", "status": "open"}])[0]
+        self.comment = self.store.add_comment(self.vendor["id"], "usr_priya", "Priya Shah", "Looks fine so far.")
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def test_every_record_carries_an_expiry_date(self):
         for record in (self.store.get_vendor(self.vendor["id"]), self.document,
-                       self.store.latest_assessment(self.vendor["id"]), self.store.list_decisions()[0]):
+                       self.store.latest_assessment(self.vendor["id"]), self.store.list_decisions()[0],
+                       self.task, self.comment):
             self.assertEqual(record["expires_at"], int(self.clock.now) + 30 * DAY)
 
     def test_nothing_is_removed_before_the_retention_date(self):
@@ -52,9 +57,12 @@ class Retention(unittest.TestCase):
     def test_everything_for_an_expired_vendor_is_removed_including_files(self):
         self.clock.advance(31)
         removed = self.store.purge_expired()
-        self.assertEqual(removed, {"vendors": 1, "documents": 1, "assessments": 1, "decisions": 1, "files": 1})
+        self.assertEqual(removed, {"vendors": 1, "documents": 1, "assessments": 1, "tasks": 1, "comments": 1,
+                                   "decisions": 1, "files": 1})
         self.assertIsNone(self.store.get_vendor(self.vendor["id"]))
         self.assertEqual(self.store.list_decisions(), [])
+        self.assertEqual(self.store.list_tasks(), [])
+        self.assertEqual(self.store.list_comments(), [])
         self.assertFalse(self.file.exists())
 
     def test_activity_keeps_a_vendor_alive(self):
