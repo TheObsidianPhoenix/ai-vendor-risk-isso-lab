@@ -31,7 +31,8 @@ An AI-assisted third-party risk management (TPRM) application, built and governe
 - **[DAST with OWASP ZAP](docs/system-security/dast-local-zap.md):** about 10,000 attack requests signed out and as two roles; no high or medium findings, no server errors, and the one low alert verified harmless in a real browser
 - **[Risk register and POA&M](docs/risk-management/risk-register.md):** 10 open risks with a plan for each, 7 accepted risks, and EV-01 closed
 - **[Multi-tenant, with tenant isolation](docs/system-security/tenant-isolation.md):** two fictional client companies share one running product, and no role in one company can read, change or even detect the other's records. Fourteen tests attack the boundary; breaking it on purpose makes 23 checks fail
-- 197 automated tests; every change goes through a pull request with required checks
+- **[Risk-tiered review workflow](docs/system-security/tenant-isolation.md#milestone-2-required-review-tasks-by-risk-tier-d-19) (D-19):** a vendor's tier decides who has to weigh in (Security, AI usage, IT, Legal, Privacy, a department head), enforced server-side — a decision can't be recorded while any required review is still open — with the two-person rule now covering High as well as Critical vendors
+- 229 automated tests; every change goes through a pull request with required checks
 
 ## See it
 

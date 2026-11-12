@@ -109,7 +109,7 @@ async function render() {
   const [route, id] = (location.hash.slice(1) || "overview").split("/");
   const content = h("main", { class: "content", id: "content" });
   root.replaceChildren(shell(route, content));
-  const screens = { overview, vendors, vendor, newvendor: newVendor, queue, rules, audit: auditScreen, users, settings };
+  const screens = { overview, vendors, vendor, newvendor: newVendor, queue, tracking, rules, audit: auditScreen, users, settings };
   const screen = screens[route] || overview;
   content.append(h("p", { class: "muted" }, "Loading…"));
   try {
@@ -139,6 +139,7 @@ function shell(route, content) {
           link("overview", "grid", "Overview"),
           link("vendors", "building", "Vendors", can("vendor.view_own") || can("vendor.view_all")),
           link("queue", "inbox", "Review queue", can("decision.record")),
+          link("tracking", "pulse", "Tracking", can("vendor.view_all")),
           link("rules", "ruler", "Scoring rules")),
         h("div", { class: "nav-group" }, h("div", { class: "nav-label" }, "Security & governance"),
           link("audit", "list", "Audit log", can("audit.view")),
@@ -314,7 +315,74 @@ async function vendor(id) {
     fedrampPanel(d),
     documentsPanel(d),
     a ? assessmentPanel(d) : null,
-    a && a.status === "ready_for_review" ? decisionPanel(d) : null);
+    a && a.status === "ready_for_review" ? reviewTasksPanel(d) : null,
+    a && a.status === "ready_for_review" ? decisionPanel(d) : null,
+    commentsPanel(d));
+}
+
+function reviewTasksPanel(d) {
+  if (!d.tasks.length) return null;
+  const openCount = d.tasks.filter((t) => t.status !== "done").length;
+  const row = (t) => {
+    if (t.status === "done") {
+      return h("div", { class: "task-row task-done" },
+        h("span", { class: "task-check task-check-done" }, icon("check", 13)),
+        h("div", { style: "flex:1" },
+          h("div", {}, h("strong", {}, t.label)),
+          h("div", { class: "small muted" }, `${t.completed_by_name} · ${when(t.completed_at)}`),
+          h("div", { class: "small", style: "margin-top:4px" }, t.note)));
+    }
+    const action = t.can_complete ? h("form", { class: "task-complete-form", onsubmit: async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const btn = e.target.querySelector("button");
+      btn.disabled = true;
+      try {
+        await api("POST", `/api/tasks/${t.id}/complete`, { note: f.get("note") });
+        toast(`${t.label}: checked off.`);
+        render();
+      } catch (err) { btn.disabled = false; toast(err.message, 6000); }
+    } },
+      h("textarea", { class: "input", name: "note", required: true, minlength: 5, maxlength: 1000, rows: 2,
+        placeholder: `What was reviewed, and by whom (if not you)?` }),
+      h("button", { class: "btn btn-sm", type: "submit" }, "Check off")) :
+      h("div", { class: "small muted", style: "margin-top:4px" }, "Waiting on this review.");
+    return h("div", { class: "task-row task-open" },
+      h("span", { class: "task-check task-check-open" }),
+      h("div", { style: "flex:1" }, h("div", {}, h("strong", {}, t.label)), action));
+  };
+  return h("div", { class: "zone zone-human" },
+    h("div", { class: "zone-title" }, h("span", { class: "prov prov-human" }, icon("check", 14), "Required reviews"),
+      h("h3", {}, "3 · Reviews for this tier"),
+      h("span", { class: "hint" }, openCount ? `${openCount} still open` : "All checked off")),
+    h("div", { class: "panel-body task-list" }, d.tasks.map(row)),
+    h("p", { class: "annot" }, h("b", {}, "Why these? "),
+      "The vendor's tier decides who has to weigh in. Every tier always includes an explicit AI-usage review, " +
+      "on top of anything the automated scoring already covers, and Moderate and up add IT, Legal and Privacy."));
+}
+
+function commentsPanel(d) {
+  const list = d.comments.map((c) => h("div", { class: "comment-row" },
+    h("div", { class: "avatar" }, c.author_name.split(" ").map((p) => p[0]).join("")),
+    h("div", { style: "flex:1" },
+      h("div", {}, h("span", { class: "name" }, c.author_name), h("span", { class: "small muted" }, " · " + when(c.posted_at))),
+      h("div", { class: "small", style: "margin-top:2px;white-space:pre-wrap" }, c.body))));
+  const form = d.can.comment ? h("form", { style: "margin-top:12px", onsubmit: async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    try {
+      await api("POST", `/api/vendors/${d.vendor.id}/comments`, { body: f.get("body") });
+      e.target.reset();
+      render();
+    } catch (err) { toast(err.message); }
+  } },
+    h("textarea", { class: "input", name: "body", required: true, maxlength: 2000, rows: 2,
+      placeholder: "Add a note for the people working on this vendor…" }),
+    h("button", { class: "btn btn-sm", type: "submit", style: "margin-top:8px" }, "Post")) : null;
+  return h("div", { class: "panel", style: "margin-top:16px" },
+    h("div", { class: "panel-head" }, h("h2", {}, "Comments"),
+      h("span", { class: "meta" }, d.comments.length ? `${d.comments.length} so far` : "Nothing yet")),
+    h("div", { class: "panel-body" }, list.length ? list : h("p", { class: "muted" }, "No comments yet."), form));
 }
 
 function fedrampPanel(d) {
@@ -522,6 +590,9 @@ function decisionPanel(d) {
       ` You're signed in as ${state.me.user.role_name}. The server would refuse this even if the form were shown.`));
   } else if (d.can.decide_blocked_reason) {
     body = h("div", { class: "callout callout-warn" }, icon("users"), h("div", {}, h("strong", {}, d.can.decide_blocked_reason)));
+  } else if (d.vendor.open_review_tasks.length) {
+    body = h("div", { class: "callout callout-warn" }, icon("lock"), h("div", {}, h("strong", {}, "Required reviews are still open."),
+      h("div", { class: "small", style: "margin-top:4px" }, "Check off every item above first: " + d.vendor.open_review_tasks.join(", ") + ".")));
   } else {
     const pending = mine.find((x) => x.stage === "first_approval");
     const form = h("form", { onsubmit: async (e) => {
@@ -534,9 +605,9 @@ function decisionPanel(d) {
         render();
       } catch (err) { toast(err.message, 6000); }
     } },
-      s.classification === "Critical" ? h("div", { class: "callout callout-warn", style: "margin-bottom:12px" }, icon("users"),
+      (s.classification === "High" || s.classification === "Critical") ? h("div", { class: "callout callout-warn", style: "margin-bottom:12px" }, icon("users"),
         h("div", {}, pending ? `${pending.reviewer_name} gave the first approval. Your decision completes the review; you must be a different reviewer.`
-          : "Critical vendor: an approval needs a second, different reviewer before it's final.")) : null,
+          : `${s.classification} vendor: an approval needs a second, different reviewer before it's final.`)) : null,
       h("div", { class: "field" }, h("span", {}, "Your decision"), h("div", { class: "radio-cards" },
         radioCard("decision", "Approved", "Approved", "Risk accepted as is"),
         radioCard("decision", "Approved with Conditions", "Approved with conditions", "Accept if the conditions are met"),
@@ -555,7 +626,7 @@ function decisionPanel(d) {
   }
   return h("div", { class: "zone zone-human" },
     h("div", { class: "zone-title" }, h("span", { class: "prov prov-human" }, icon("user"), "Human decision"),
-      h("h3", {}, "3 · Final decision"), h("span", { class: "hint" }, "Recorded only by an authorized reviewer")),
+      h("h3", {}, "4 · Final decision"), h("span", { class: "hint" }, "Recorded only by an authorized reviewer")),
     history, body);
 }
 
@@ -567,6 +638,29 @@ async function queue() {
     h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Review queue"),
       h("p", { class: "sub" }, "Vendors with a valid assessment and no final decision. Highest risk first."))),
     waiting.length ? vendorTable(waiting.sort((x, y) => (y.score || 0) - (x.score || 0))) : h("p", { class: "muted" }, "Nothing waiting."));
+}
+
+// ---------- tracking ----------
+async function tracking() {
+  const data = await api("GET", "/api/tracking");
+  const section = (title, hint, list, empty) => h("div", { class: "panel", style: "margin-bottom:16px" },
+    h("div", { class: "panel-head" }, h("h2", {}, title), h("span", { class: "meta" }, hint)),
+    list.length ? h("div", { class: "panel-body flush table-wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, ["Vendor", "Tier", "Open reviews", "Status"].map((t) => h("th", {}, t)))),
+      h("tbody", {}, list.map((v) => h("tr", { class: "clickable", onclick: () => { location.hash = "#vendor/" + v.id; } },
+        h("td", {}, h("a", { class: "strong", href: "#vendor/" + v.id, style: "color:var(--text);text-decoration:none" }, v.name),
+          h("div", { class: "small muted" }, v.owner_name)),
+        h("td", {}, classBadge(v.classification, v.score)),
+        h("td", { class: "small" }, v.open_review_tasks.length ? v.open_review_tasks.join(", ") : h("span", { class: "muted" }, "None")),
+        h("td", {}, statusBadge(v.status)))))))
+      : h("div", { class: "panel-body muted" }, empty));
+  return h("div", {},
+    h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Tracking"),
+      h("p", { class: "sub" }, "Every vendor you can see, by where it stands: who still has to weigh in, and what's ready for a decision."))),
+    section("Needs review", `${data.needs_review.length} vendor(s)`, data.needs_review,
+      "Nothing is waiting on a required review right now."),
+    section("Ready for a decision", `${data.ready_for_decision.length} vendor(s)`, data.ready_for_decision,
+      "Nothing has cleared its checklist without a final decision yet."));
 }
 
 // ---------- scoring rules ----------

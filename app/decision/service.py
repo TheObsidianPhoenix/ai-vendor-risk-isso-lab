@@ -11,7 +11,8 @@ rule that fails refuses the decision and nothing is written.
 | The assessment is the latest one and produced a valid result | HR-03 |
 | One of the four decisions, a written rationale, evidence confirmed | FR-10, HR-07 |
 | An assessment's final decision is never changed or replaced | No overwrites |
-| A Critical vendor needs a second, different reviewer to approve | HR-06, FR-11 |
+| A High or Critical vendor needs a second, different reviewer to approve | HR-06, FR-11 |
+| Every required review task for the vendor's tier (app.review.tasks) is checked off | Milestone 2 |
 | Approving a High or Critical vendor, or rejecting a Low one, is an override | HR-05 |
 | A vendor handling federal data without the FedRAMP level it needs can't get a plain "Approved"; "Approved with Conditions" is an exception and an override | D-13 |
 
@@ -22,6 +23,7 @@ and in AWS the AI worker's IAM role is explicitly denied the decisions table.
 from __future__ import annotations
 
 from app.common.auth import PermissionDenied, Session
+from app.review import LABELS, open_kinds
 
 from . import fedramp
 
@@ -85,12 +87,18 @@ def record_decision(*, store, audit, session: Session, assessment_id: str, decis
         refuse("This assessment already has a final decision. Decisions are never changed; run a new assessment instead")
 
     classification = assessment["score"]["classification"]
+
+    open_tasks = open_kinds(store.list_tasks(assessment_id=assessment_id))
+    if open_tasks:
+        labels = ", ".join(LABELS.get(k, k) for k in open_tasks)
+        refuse(f"Required reviews are still open for this tier: {labels}")
+
     pending = [d for d in earlier if d["stage"] == "first_approval"]
     if pending and pending[-1]["reviewer_id"] == user.id:
         refuse("Two-person rule: a different reviewer must give the second approval")
 
-    if classification == "Critical" and decision in APPROVALS and not pending:
-        stage = "first_approval"   # Not final until a second reviewer agrees (HR-06)
+    if classification in ("High", "Critical") and decision in APPROVALS and not pending:
+        stage = "first_approval"   # Not final until a second reviewer agrees (HR-06, extended to High)
     else:
         stage = "final"
 
