@@ -247,6 +247,21 @@ textarea.input{min-height:90px;resize:vertical}
 .signature .name{font-weight:600}
 .signature .when{font-size:12px;color:var(--text-3)}
 
+.task-list{display:flex;flex-direction:column;gap:10px}
+.task-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:8px;border:1px solid var(--line)}
+.task-row.task-done{background:var(--ok-bg);border-color:color-mix(in oklab,var(--ok) 35%,transparent)}
+.task-row.task-open{background:var(--surface)}
+.task-check{width:20px;height:20px;border-radius:50%;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.task-check-open{border:2px solid var(--line-strong)}
+.task-check-done{background:var(--ok);color:#fff}
+.task-complete-form{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.task-complete-form .input{flex:1;min-width:220px}
+
+.comment-row{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.comment-row:last-of-type{border-bottom:none}
+.comment-row .avatar{width:30px;height:30px;font-size:12px;flex:none}
+.comment-row .name{font-weight:600;font-size:13px}
+
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
 .tab{padding:9px 14px;border:0;background:none;cursor:pointer;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}

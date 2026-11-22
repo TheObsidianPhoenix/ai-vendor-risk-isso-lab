@@ -34,6 +34,9 @@ from app.common.store import Store, now
 from app.decision import DECISIONS, DecisionRefused, fedramp, record_decision, vendor_status
 from app.intake import DEFAULT_LIMITS, scan_file
 from app.intake.result import INJECTION_FLAG_KINDS
+from app.review import LABELS, can_comment, can_complete, generate as generate_tasks, open_kinds
+from app.review.comments import MAX_LENGTH as MAX_COMMENT_LENGTH
+from app.review.tasks import MIN_NOTE
 from app.rules_engine import RULE_SET_VERSION, ruleset
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -60,7 +63,8 @@ SECURITY_HEADERS = {
 # The handlers a tenant app answers. Anything else is refused, whatever a caller asks for.
 TENANT_ROUTES = frozenset({"sign_out", "me", "overview", "list_vendors", "create_vendor", "get_vendor", "upload",
                            "record_fedramp", "assess", "decide", "audit_log", "users", "get_settings",
-                           "change_settings", "rules"})
+                           "change_settings", "rules", "complete_task", "add_comment", "list_comments",
+                           "tracking"})
 
 
 class ApiError(Exception):
@@ -122,12 +126,14 @@ class TenantApp:
     def _vendor_summary(self, vendor: dict) -> dict:
         latest = self.store.latest_assessment(vendor["id"])
         score = latest["score"] if latest and latest.get("score") else None
+        open_tasks = open_kinds(self.store.list_tasks(assessment_id=latest["id"])) if latest else []
         return dict(vendor, status=vendor_status(self.store, vendor["id"])["status"],
                     score=score["score"] if score else None,
                     classification=score["classification"] if score else None,
                     injection_flagged=bool(latest and latest["injection_flags"]),
                     fedramp_requirement=fedramp.requirement(vendor),
-                    document_count=len(self.store.list_documents(vendor["id"])))
+                    document_count=len(self.store.list_documents(vendor["id"])),
+                    open_review_tasks=[LABELS.get(k, k) for k in open_tasks])
 
     # ----- handlers --------------------------------------------------------------
     def sign_out(self, session, body, token=None, **_):
@@ -183,18 +189,24 @@ class TenantApp:
         latest = self.store.latest_assessment(vendor_id)
         user = session.user
         uploaders = {d["uploaded_by"] for d in documents}
+        tasks = self.store.list_tasks(assessment_id=latest["id"]) if latest else []
+        for t in tasks:
+            t["can_complete"] = t["status"] == "open" and can_complete(user, t["kind"])
         return {
             "vendor": self._vendor_summary(vendor),
             "documents": documents,
             "assessment": latest,
             "assessment_count": len(self.store.list_assessments(vendor_id)),
             "decisions": self.store.list_decisions(vendor_id),
+            "tasks": tasks,
+            "comments": self.store.list_comments(vendor_id),
             "status": vendor_status(self.store, vendor_id),
             "can": {
                 "upload": auth.can_upload(user, vendor),
                 "assess": auth.can_run_assessment(user, vendor),
                 "decide": user.has("decision.record"),
                 "verify_fedramp": user.has("vendor.verify_fedramp"),
+                "comment": can_comment(user, vendor),
                 "decide_blocked_reason": ("Separation of duties: you requested this vendor or uploaded its documents"
                                           if user.id == vendor["owner_id"] or user.id in uploaders else None),
             },
@@ -254,6 +266,12 @@ class TenantApp:
                                 documents=documents, model=make_model(self.settings["model_mode"]))
         assessment = self.store.add_assessment(record, started_by=session.user.id, started_by_name=session.user.name)
         score = assessment["score"]
+        tasks = []
+        if assessment["status"] == "ready_for_review" and score:
+            # The tier decides who has to review it (Milestone 2). Generated once, right
+            # here, so a decision can never be recorded against a checklist that doesn't exist.
+            tasks = self.store.create_tasks(vendor_id, assessment["id"],
+                                            generate_tasks(vendor_id, assessment["id"], score["classification"]))
         self._log(session, "assessment.run", vendor_id,
                   "success" if assessment["status"] == "ready_for_review" else assessment["status"],
                   assessment_id=assessment["id"], model_mode=record["model_mode"],
@@ -263,8 +281,9 @@ class TenantApp:
                   citation_problems=len(assessment["citation_problems"]),
                   input_tokens=(assessment.get("usage") or {}).get("input_tokens"),
                   output_tokens=(assessment.get("usage") or {}).get("output_tokens"),
-                  injection_flags=len(assessment["injection_flags"]))
-        return {"assessment": assessment}
+                  injection_flags=len(assessment["injection_flags"]),
+                  review_tasks=[t["kind"] for t in tasks])
+        return {"assessment": assessment, "tasks": tasks}
 
     def decide(self, session, body, assessment_id, **_):
         if not session.user.has("decision.record"):
@@ -285,6 +304,54 @@ class TenantApp:
         except auth.PermissionDenied as reason:
             raise ApiError(403, str(reason)) from None
         return {"decision": record}
+
+    def complete_task(self, session, body, task_id, **_):
+        """Check off one required review (Milestone 2). The note says who from that
+        function weighed in and what they found; it's part of the record, not a formality."""
+        task = self.store.get_task(task_id)
+        if task is None:
+            raise ApiError(404, "Review task not found")
+        self._visible_vendor(session, task["vendor_id"])  # Same 404 if it's another company's task
+        if not can_complete(session.user, task["kind"]):
+            self._log(session, "task.complete", task_id, "denied", kind=task["kind"])
+            raise ApiError(403, f"Your role can't complete the {LABELS.get(task['kind'], task['kind'])} task")
+        if task["status"] == "done":
+            raise ApiError(409, "This review is already checked off")
+        note = str(body.get("note", "")).strip()
+        if len(note) < MIN_NOTE:
+            raise ApiError(400, f"Say what you reviewed, in at least {MIN_NOTE} characters")
+        updated = self.store.complete_task(task_id, session.user.id, session.user.name, note[:1000])
+        self._log(session, "task.complete", task_id, kind=task["kind"], vendor_id=task["vendor_id"],
+                  assessment_id=task["assessment_id"])
+        return {"task": updated}
+
+    def add_comment(self, session, body, vendor_id, **_):
+        vendor = self._visible_vendor(session, vendor_id)
+        if not can_comment(session.user, vendor):
+            self._log(session, "comment.add", vendor_id, "denied")
+            raise ApiError(403, "You can't comment on this vendor")
+        text = str(body.get("body", "")).strip()
+        if not text:
+            raise ApiError(400, "Write something before posting")
+        comment = self.store.add_comment(vendor_id, session.user.id, session.user.name, text[:MAX_COMMENT_LENGTH])
+        self._log(session, "comment.add", vendor_id, comment_id=comment["id"])
+        return {"comment": comment}
+
+    def list_comments(self, session, body, vendor_id, **_):
+        self._visible_vendor(session, vendor_id)
+        return {"comments": self.store.list_comments(vendor_id)}
+
+    def tracking(self, session, body, **_):
+        """Cross-vendor tracking view: everything the signed-in person can see,
+        grouped by whether a required review is still open. The same visibility
+        rule as list_vendors (SR-01); nothing new is exposed here."""
+        user = session.user
+        vendors = [self._vendor_summary(v) for v in self.store.list_vendors() if auth.can_view_vendor(user, v)]
+        needs_review = [v for v in vendors if v["open_review_tasks"]]
+        ready_for_decision = [v for v in vendors if v["classification"] and not v["open_review_tasks"]
+                              and v["status"] in ("Awaiting human decision", "Awaiting second approval")]
+        return {"needs_review": needs_review[::-1], "ready_for_decision": ready_for_decision[::-1],
+                "total": len(vendors)}
 
     def audit_log(self, session, body, **_):
         self._require(session, "audit.view", "audit.view")
@@ -361,6 +428,10 @@ class CounterpartApp:
             ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/fedramp", "record_fedramp", True),
             ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/assessments", "assess", True),
             ("POST", rf"/api/assessments/(?P<assessment_id>{ID})/decisions", "decide", True),
+            ("POST", rf"/api/tasks/(?P<task_id>{ID})/complete", "complete_task", True),
+            ("GET", rf"/api/vendors/(?P<vendor_id>{ID})/comments", "list_comments", True),
+            ("POST", rf"/api/vendors/(?P<vendor_id>{ID})/comments", "add_comment", True),
+            ("GET", r"/api/tracking", "tracking", True),
             ("GET", r"/api/audit", "audit_log", True),
             ("GET", r"/api/users", "users", True),
             ("GET", r"/api/settings", "get_settings", True),

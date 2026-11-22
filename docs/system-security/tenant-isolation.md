@@ -44,4 +44,23 @@ To confirm the tests have teeth, the routing was deliberately broken (every requ
 
 - The operator (Obsidian Phoenix Labs) has no access path to tenant data at all in this milestone. Time-limited, approved and logged support access is a later design.
 - Per-tenant encryption keys and IAM-scoped credentials exist only in the design until the AWS deployment milestone.
-- Each tenant's own standards, risk tiers and the cross-department workflow arrive in Milestone 2.
+- Each tenant's own standards and a richer cross-department workflow (due dates, escalation) are a later milestone.
+
+## Milestone 2: required review tasks by risk tier (D-19)
+
+A vendor's classification (`app.rules_engine`) decides which reviews are required before a decision can be recorded, from `app.review.tasks.REQUIRED_TASKS`:
+
+| Tier | Required reviews |
+|---|---|
+| Low | Security, AI usage, department head (one approver) |
+| Moderate | Security, AI usage, IT, department head (one approver) |
+| High | Security, AI usage, IT, Legal, Privacy, department head (**two-person rule**) |
+| Critical | Security, AI usage, IT, Legal, Privacy, department head (**two-person rule**) |
+
+Every tier always includes an explicit AI-usage review, on top of whatever the automated scoring already covers for a vendor flagged as using AI on our data (`uses_ai_on_customer_data`) — because a vendor's own self-report shouldn't be the only check on that, and few vendors today have no AI involvement at all. The two-person rule, previously Critical only, now also applies to High.
+
+The checklist is generated once, the moment an assessment becomes `ready_for_review` (`app.web.server.assess`), and `app.decision.service.record_decision` refuses to record a decision while any required task is still open — enforced on the server, not a UI convenience. There's no separate "Legal" or "Department head" role: a reviewer checks off every kind of task, and the note records who actually gave that answer (e.g. "Department head Maria Chen approved by email"). Administrators still have no vendor visibility at all (unchanged from Milestone 1), so they can't complete tasks or comment either.
+
+Each vendor also carries an append-only comment thread (`app.review.comments`), visible only inside its own tenant.
+
+Proven the same way as tenant isolation: the task-completion gate was deliberately removed from `record_decision`, the full suite was run (2 tests failed, exactly naming the missing gate), and the code was restored.

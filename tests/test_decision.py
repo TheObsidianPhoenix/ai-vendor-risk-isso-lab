@@ -12,6 +12,7 @@ from app.common.audit import AuditLog
 from app.common.auth import FRESH_SIGN_IN_SECONDS, PermissionDenied, Session, get_user
 from app.common.store import Store
 from app.decision import DecisionRefused, record_decision, vendor_status
+from app.review.tasks import LABELS, generate
 from tests.helpers import expected, sample_documents
 
 RATIONALE = "Reviewed the SOC 2 evidence and the open conflicts in detail."
@@ -139,6 +140,38 @@ class DecisionRules(unittest.TestCase):
     def test_no_status_until_a_person_decides(self):
         vendor, _ = self.vendor()
         self.assertEqual(vendor_status(self.store, vendor["id"]), {"status": "Awaiting human decision", "final": False})
+
+    # ----- Milestone 2: required review tasks -------------------------------------
+    def test_high_approval_also_needs_a_second_different_reviewer(self):
+        # D-19 extended the two-person rule from Critical-only to High and Critical.
+        _, assessment = self.vendor("nimbus-notes-ai")
+        self.assertEqual(assessment["score"]["classification"], "High")
+        first = self.decide(assessment, "usr_dana", "Approved")
+        self.assertEqual(first["stage"], "first_approval")
+        with self.assertRaisesRegex(DecisionRefused, "different reviewer"):
+            self.decide(assessment, "usr_dana", "Approved")
+        second = self.decide(assessment, "usr_marcus", "Approved")
+        self.assertEqual(second["stage"], "final")
+
+    def test_decision_refused_while_a_required_review_is_still_open(self):
+        vendor, assessment = self.vendor("nimbus-notes-ai")  # High: 6 required tasks
+        tasks = self.store.create_tasks(vendor["id"], assessment["id"],
+                                        generate(vendor["id"], assessment["id"], "High"))
+        with self.assertRaisesRegex(DecisionRefused, "Required reviews are still open"):
+            self.decide(assessment, decision="Rejected")
+        # Complete every task but one: still refused, and the message names the one left
+        for task in tasks[:-1]:
+            self.store.complete_task(task["id"], "usr_dana", "Dana Whitfield", "Reviewed, no concerns.")
+        with self.assertRaisesRegex(DecisionRefused, LABELS[tasks[-1]["kind"]]):
+            self.decide(assessment, decision="Rejected")
+        self.store.complete_task(tasks[-1]["id"], "usr_dana", "Dana Whitfield", "Reviewed, no concerns.")
+        self.assertEqual(self.decide(assessment, decision="Rejected")["decision"], "Rejected")
+
+    def test_a_tier_with_no_checklist_on_record_is_not_gated(self):
+        # Belt-and-suspenders check: an assessment nobody ever generated a checklist for
+        # (every real one gets one in app.web.server.assess) isn't silently blocked forever.
+        _, assessment = self.vendor("kestrel-payroll-cloud")  # Low; this test creates no tasks
+        self.assertEqual(self.decide(assessment, decision="Rejected")["decision"], "Rejected")
 
 
 if __name__ == "__main__":
