@@ -17,6 +17,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from pypdf import PdfWriter
+from pypdf.actions import JavaScript
 from reportlab.pdfgen import canvas
 
 from app.intake import DEFAULT_LIMITS, run_with_time_limit, scan_file
@@ -201,8 +202,10 @@ class TypeAndSizeChecks(unittest.TestCase):
 
 class PdfChecks(unittest.TestCase):
     def test_javascript_is_rejected(self):
+        # add_js was removed in pypdf 7.0; add_open_action is the replacement
+        # (same effect: an /OpenAction of type /JavaScript on document open).
         writer = _writer_from(make_pdf())
-        writer.add_js("app.alert('hi');")
+        writer.add_open_action(JavaScript("app.alert('hi');"))
         self.assertIn("JavaScript", scan_file(_write(writer), "p.pdf").rejection_reason)
 
     def test_embedded_file_is_rejected(self):
