@@ -16,6 +16,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      # github/codeql-action/init and .../analyze must stay on the same
+      # version (security-checks.yml fails its "Code scanning" check if
+      # they drift, as happened with #48 and #50 opening separately for
+      # a single matched-version bump). One PR, both files, every time.
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
 
   - package-ecosystem: terraform
     directories:
